@@ -2,3 +2,6 @@ node_modules/
 .DS_Store
 lectureData.txt
 *.html
+rsarchive_tafeln/
+*.csv
+original-text/
