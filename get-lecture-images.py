@@ -128,12 +128,15 @@ def get_ga_metadata(ga, force_refresh=False):
                             elif not img_src.startswith("http"):
                                 img_src = requests.compat.urljoin(base_url, img_src)
 
-                            # STRICT FILTER: Only accept images with -T in filename
-                            if "-T" not in img_src:
+                            # STRICT FILTER: Only accept rsarchive "tafel" URLs of the form:
+                            # https://rsarchive.org/Lectures/GA208/German/images/208-T02.webp
+                            tafeln_url_re = re.compile(
+                                rf"^https://rsarchive\.org/Lectures/GA{ga}/German/images/{ga}-T(\d{{2}})\.webp$"
+                            )
+                            t_match = tafeln_url_re.match(img_src)
+                            if not t_match:
                                 continue
-
-                            t_match = re.search(r'-T(\d{2,4})', img_src)
-                            t_num = int(t_match.group(1)) if t_match else None
+                            t_num = int(t_match.group(1))
 
                             date_match = re.search(r'/(\d{8})', href)
                             date_str = f"{date_match.group(1)[:4]}-{date_match.group(1)[4:6]}-{date_match.group(1)[6:8]}" if date_match else "Unknown"
