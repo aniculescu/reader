@@ -27,6 +27,13 @@ session = requests.Session()
 
 MIN_IMAGE_SIZE = 100 * 1024  # 100 KB - skip tiny thumbnails
 
+def format_book_title(raw_title, ga):
+    cleaned = re.sub(r'\bGA[-\s]?\d{1,3}\b', '', raw_title, flags=re.IGNORECASE)
+    cleaned = re.sub(r'^[\s:,\-–—]+|[\s:,\-–—]+$', '', cleaned)
+    if not cleaned:
+        return f"(GA-{ga})"
+    return f"{cleaned} (GA-{ga})"
+
 # ====================== GA NUMBER CACHE ======================
 def load_or_fetch_ga_cache(force_refresh=False):
     os.makedirs(BASE_DIR, exist_ok=True)
@@ -100,70 +107,93 @@ def get_ga_metadata(ga, force_refresh=False):
 
         soup = BeautifulSoup(r.text, "html.parser")
 
-        cycle_title = f"GA {ga}"
+        cycle_title = f"(GA-{ga})"
         h2 = soup.find("h2")
         if h2 and h2.get_text(strip=True):
-            cycle_title = h2.get_text(strip=True)
+            cycle_title = format_book_title(h2.get_text(strip=True), ga)
 
-        lecture_list = []
+        images_by_tafel = {}
 
-        for a in soup.find_all("a", href=True):
-            href = a["href"]
-            if re.search(r'/\d{8}[a-z]?\d{2}\.html$', href):
-                lecture_url = requests.compat.urljoin(base_url, href)
-                lecture_title = a.get_text(strip=True)
+        ga_table = soup.find("table", class_="gaTable")
+        all_tds = ga_table.find_all("td") if ga_table else []
+        rows = [all_tds[i:i+5] for i in range(0, len(all_tds), 5)]
 
-                try:
-                    lr = session.get(lecture_url, timeout=TIMEOUT)
-                    lsoup = BeautifulSoup(lr.text, "html.parser")
+        for cells in rows:
+            if len(cells) < 5:
+                continue
 
-                    german_div = lsoup.find("div", class_="German")
-                    if german_div:
-                        for img in german_div.find_all("img"):
-                            img_src = img.get("src")
-                            if not img_src:
-                                continue
-                            if img_src.startswith("../../"):
-                                img_src = requests.compat.urljoin(lecture_url, img_src)
-                            elif not img_src.startswith("http"):
-                                img_src = requests.compat.urljoin(base_url, img_src)
+            link = cells[1].find("a", href=True)
+            if not link:
+                continue
+            href = link["href"]
+            if not re.search(r'/\d{8}[a-z]?\d{2}\.html$', href):
+                continue
 
-                            # STRICT FILTER: Only accept rsarchive "tafel" URLs of the form:
-                            # https://rsarchive.org/Lectures/GA208/German/images/208-T02.webp
-                            tafeln_url_re = re.compile(
-                                rf"^https://rsarchive\.org/Lectures/GA{ga}/German/images/{ga}-T(\d{{2}})\.webp$"
-                            )
-                            t_match = tafeln_url_re.match(img_src)
-                            if not t_match:
-                                continue
-                            t_num = int(t_match.group(1))
+            lecture_url = requests.compat.urljoin(base_url, href)
+            lecture_title = link.get_text(strip=True)
 
-                            date_match = re.search(r'/(\d{8})', href)
-                            date_str = f"{date_match.group(1)[:4]}-{date_match.group(1)[4:6]}-{date_match.group(1)[6:8]}" if date_match else "Unknown"
+            raw_book = cells[2].get_text(strip=True)
+            if raw_book.lower() == "single translation":
+                book_title = "Single Translation"
+            elif raw_book:
+                book_title = format_book_title(raw_book, ga)
+            else:
+                book_title = cycle_title
 
-                            location = "Unknown"
-                            loc_match = re.search(r'\b(Dornach|Stuttgart|Berlin|Munich|Basel|Basle|Prague|London|Paris|New York)\b', lr.text, re.I)
-                            if loc_match:
-                                location = loc_match.group(1)
+            raw_location = cells[4].get_text(strip=True)
 
-                            book_title = cycle_title
-                            if "single translation" in lr.text.lower():
-                                book_title = "Single Translation"
+            date_match = re.search(r'/(\d{8})', href)
+            date_str = f"{date_match.group(1)[:4]}-{date_match.group(1)[4:6]}-{date_match.group(1)[6:8]}" if date_match else "Unknown"
 
-                            lecture_list.append({
-                                "date": date_str,
-                                "title": lecture_title,
-                                "location": location,
-                                "book_title": book_title,
+            appearance = {
+                "lecture_title": lecture_title,
+                "book_title": book_title,
+                "date": date_str,
+                "location": raw_location,
+            }
+
+            try:
+                lr = session.get(lecture_url, timeout=TIMEOUT)
+                lsoup = BeautifulSoup(lr.text, "html.parser")
+
+                german_div = lsoup.find("div", class_="German")
+                if german_div:
+                    seen_in_page = set()
+                    for img in german_div.find_all("img"):
+                        img_src = img.get("src")
+                        if not img_src:
+                            continue
+                        if not img_src.startswith("http"):
+                            img_src = requests.compat.urljoin(lecture_url, img_src)
+
+                        t_match = re.match(
+                            rf"^https://rsarchive\.org/Lectures/GA{ga}/.+/{ga}-T(\d{{2}})\.webp$",
+                            img_src
+                        )
+                        if not t_match:
+                            continue
+                        t_num = int(t_match.group(1))
+
+                        if t_num in seen_in_page:
+                            continue
+                        seen_in_page.add(t_num)
+
+                        if t_num not in images_by_tafel:
+                            images_by_tafel[t_num] = {
+                                "tafel_number": t_num,
                                 "image_url": img_src,
-                                "tafel_number": t_num
-                            })
-                except:
-                    continue
+                                "lectures": [],
+                            }
 
-        lecture_list.sort(key=lambda x: x["date"])
+                        existing = images_by_tafel[t_num]["lectures"]
+                        if appearance not in existing:
+                            existing.append(appearance)
+            except:
+                continue
 
-        data = {"lectures": lecture_list}
+        image_list = sorted(images_by_tafel.values(), key=lambda x: x["tafel_number"])
+
+        data = {"images": image_list}
         cache[ga_str] = data
         save_metadata_cache(cache)
         return data
@@ -210,38 +240,23 @@ def process_ga(ga, overwrite=False, metadata_only=False, refresh_metadata=False)
         return None
 
     meta = get_ga_metadata(ga, force_refresh=refresh_metadata)
-    lectures = meta.get("lectures", [])
+    images = meta.get("images", [])
 
-    if not lectures:
+    if not images:
         print(f"GA{ga}: No lectures or images found.")
         return None
 
-    results = []
-    for lect in lectures:
-        image_url = lect.get("image_url")
-        t_num = lect.get("tafel_number")
-
-        local_path = None
-        if image_url and not metadata_only:
-            local_path = download_image(image_url, ga, t_num)
-
-        results.append({
-            "ga": ga,
-            "image_url": image_url,
-            "local_path": local_path,
-            "lecture_title": lect.get("title", "Unknown"),
-            "book_title": lect.get("book_title", "Unknown"),
-            "date": lect.get("date", "Unknown"),
-            "location": lect.get("location", "Unknown"),
-            "tafel_number": t_num
-        })
+    for img_entry in images:
+        img_entry["ga"] = ga
+        if not metadata_only:
+            img_entry["local_path"] = download_image(img_entry["image_url"], ga, img_entry["tafel_number"])
 
     os.makedirs(ga_dir, exist_ok=True)
     with open(metadata_path, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
+        json.dump(images, f, indent=2, ensure_ascii=False)
 
-    print(f"GA{ga}: Saved {len(results)} entries")
-    return results
+    print(f"GA{ga}: Saved {len(images)} images")
+    return images
 
 # ====================== MAIN ======================
 def main():
@@ -269,14 +284,20 @@ def main():
             all_results.extend(ga_results)
 
     print("\n" + "="*170)
-    print(f"{'GA':<6} {'Tafel':<6} {'Date':<12} {'Location':<12} {'Book Title':<35} Lecture Title")
+    print(f"{'GA':<6} {'Tafel':<6} {'Lectures':<10} Lecture / Book Titles")
     print("="*170)
     for item in all_results:
         t_num = item.get("tafel_number")
         t_str = f"T{t_num:02d}" if t_num else "N/A"
-        print(f"{item['ga']:<6} {t_str:<6}   {item.get('date','Unknown'):<12} {item.get('location','Unknown'):<12} {item.get('book_title','Unknown')[:33]:<35} {item.get('lecture_title','')[:60]}")
+        lectures = item.get("lectures", [])
+        titles = "; ".join(
+            f"{l['lecture_title']} [{l['book_title']}]" for l in lectures
+        )
+        print(f"{item['ga']:<6} {t_str:<6}   {len(lectures):<10} {titles[:120]}")
 
-    print(f"\n🎉 Done! Only images with '-T' in the filename are being saved.")
+    total_images = len(all_results)
+    total_lectures = sum(len(item.get("lectures", [])) for item in all_results)
+    print(f"\n🎉 Done! {total_images} unique images across {total_lectures} lecture appearances.")
 
 if __name__ == "__main__":
     main()
