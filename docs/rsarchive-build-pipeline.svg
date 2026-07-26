@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="1500" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#555"/>
+    </marker>
+    <style>
+      .phase  { font-size:15px; font-weight:700; fill:#fff; letter-spacing:.5px; }
+      .step   { font-size:15px; font-weight:600; fill:#1a1a1a; }
+      .sub    { font-size:12.5px; fill:#555; }
+      .tool   { font-size:11.5px; fill:#0a6; font-family:ui-monospace,Menlo,monospace; }
+      .note   { font-size:12px; fill:#b00; font-style:italic; }
+      .lnk    { stroke:#555; stroke-width:2; fill:none; marker-end:url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1040" height="1500" fill="#fafafa"/>
+  <text x="40" y="46" font-size="24" font-weight="800" fill="#111">Building a print .docx from a GA number</text>
+  <text x="40" y="72" class="sub" font-size="13">rsarchive toolkit · e.g. “create a doc for GA‑117”</text>
+
+  <!-- phase bands -->
+  <rect x="24" y="92"   width="14" height="150" rx="4" fill="#5B8DEF"/>
+  <rect x="24" y="256"  width="14" height="196" rx="4" fill="#7A5AF8"/>
+  <rect x="24" y="466"  width="14" height="150" rx="4" fill="#12A594"/>
+  <rect x="24" y="630"  width="14" height="242" rx="4" fill="#E8862B"/>
+  <rect x="24" y="886"  width="14" height="150" rx="4" fill="#D6409F"/>
+  <text x="31" y="172"  class="phase" transform="rotate(-90 31 172)" text-anchor="middle">PLAN</text>
+  <text x="31" y="354"  class="phase" transform="rotate(-90 31 354)" text-anchor="middle">PROBE</text>
+  <text x="31" y="541"  class="phase" transform="rotate(-90 31 541)" text-anchor="middle">BUILD</text>
+  <text x="31" y="751"  class="phase" transform="rotate(-90 31 751)" text-anchor="middle">ENRICH</text>
+  <text x="31" y="961"  class="phase" transform="rotate(-90 31 961)" text-anchor="middle">SHIP</text>
+
+  <!-- 1 -->
+  <rect x="80" y="96" width="560" height="66" rx="10" fill="#fff" stroke="#5B8DEF" stroke-width="2"/>
+  <text x="100" y="126" class="step">1 · Resolve the GA → full lecture list</text>
+  <text x="100" y="148" class="sub">every date + every edition (SOL / APC / Singles / Festivals …)</text>
+  <text x="470" y="126" class="tool">fetch.resolve_ga(ga)</text>
+
+  <!-- 2 -->
+  <rect x="80" y="176" width="560" height="66" rx="10" fill="#fff" stroke="#5B8DEF" stroke-width="2"/>
+  <text x="100" y="206" class="step">2 · Read the toc_and_notes md</text>
+  <text x="100" y="228" class="sub">canonical titles · order · Contents blurbs · editorial notes</text>
+  <text x="430" y="206" class="tool">temp_translations/</text>
+
+  <!-- 3 -->
+  <rect x="80" y="260" width="560" height="88" rx="10" fill="#fff" stroke="#7A5AF8" stroke-width="2"/>
+  <text x="100" y="290" class="step">3 · Decide editions, order &amp; framing</text>
+  <text x="100" y="312" class="sub">pick 1 edition per date (resolve duplicates) · chronological vs</text>
+  <text x="100" y="330" class="sub">thematic · volume vs sub‑cycle subtitle framing</text>
+
+  <!-- 4 -->
+  <rect x="80" y="362" width="560" height="88" rx="10" fill="#fff" stroke="#7A5AF8" stroke-width="2"/>
+  <text x="100" y="392" class="step">4 · Fetch + parse each lecture</text>
+  <text x="100" y="414" class="sub">extract body, headings, existing footnotes</text>
+  <text x="100" y="434" class="note">English‑only pages → disable _is_german (else truncation)</text>
+  <text x="430" y="392" class="tool">parse.extract_lecture</text>
+
+  <!-- 5 -->
+  <rect x="80" y="470" width="560" height="66" rx="10" fill="#fff" stroke="#12A594" stroke-width="2"/>
+  <text x="100" y="500" class="step">5 · Sanity‑probe every body</text>
+  <text x="100" y="522" class="sub">parsed ¶ count vs max [ N ] marker · scan for stray *italics*</text>
+
+  <!-- 6 -->
+  <rect x="80" y="550" width="560" height="66" rx="10" fill="#fff" stroke="#12A594" stroke-width="2"/>
+  <text x="100" y="580" class="step">6 · Assemble the body from the template</text>
+  <text x="100" y="602" class="sub">titles/cities/dates + Positions(CycleRef) → per‑lecture blocks</text>
+  <text x="430" y="580" class="tool">docxbuild.add_lectures</text>
+
+  <!-- 7 -->
+  <rect x="80" y="634" width="560" height="66" rx="10" fill="#fff" stroke="#E8862B" stroke-width="2"/>
+  <text x="100" y="664" class="step">7 · Images (if any)</text>
+  <text x="100" y="686" class="sub">discover sketches/Tafeln · German‑column anchor → embed</text>
+  <text x="445" y="664" class="tool">illustrations.embed</text>
+
+  <!-- 8 -->
+  <rect x="80" y="714" width="560" height="66" rx="10" fill="#fff" stroke="#E8862B" stroke-width="2"/>
+  <text x="100" y="744" class="step">8 · Contents back‑matter</text>
+  <text x="100" y="766" class="sub">heading bookmarks + toc‑h1/h2 + PAGEREF + md blurbs</text>
+
+  <!-- 9 -->
+  <rect x="80" y="780" width="560" height="88" rx="10" fill="#fff" stroke="#E8862B" stroke-width="2"/>
+  <text x="100" y="810" class="step">9 · Notes → footnotes</text>
+  <text x="100" y="832" class="sub">map German page → lecture · subagents find verbatim anchors</text>
+  <text x="100" y="852" class="sub">in the real body · insert refs + defs · clean *italics*</text>
+
+  <!-- 10 -->
+  <rect x="80" y="890" width="560" height="66" rx="10" fill="#fff" stroke="#D6409F" stroke-width="2"/>
+  <text x="100" y="920" class="step">10 · Validate</text>
+  <text x="100" y="942" class="sub">XML well‑formed · ref↔def match · bookmarks &amp; dividers resolve</text>
+
+  <!-- 11 -->
+  <rect x="80" y="970" width="560" height="66" rx="10" fill="#fff" stroke="#D6409F" stroke-width="2"/>
+  <text x="100" y="1000" class="step">11 · Deliver</text>
+  <text x="100" y="1022" class="sub">copy to Reading/ as “__print (GA‑NNN) Title.docx” · clear quarantine</text>
+
+  <!-- vertical links -->
+  <path class="lnk" d="M360,162 L360,176"/>
+  <path class="lnk" d="M360,242 L360,260"/>
+  <path class="lnk" d="M360,348 L360,362"/>
+  <path class="lnk" d="M360,450 L360,470"/>
+  <path class="lnk" d="M360,536 L360,550"/>
+  <path class="lnk" d="M360,616 L360,634"/>
+  <path class="lnk" d="M360,700 L360,714"/>
+  <path class="lnk" d="M360,780 L360,780"/>
+  <path class="lnk" d="M360,868 L360,890"/>
+  <path class="lnk" d="M360,956 L360,970"/>
+
+  <!-- side callout: subagent fan-out -->
+  <rect x="680" y="780" width="320" height="150" rx="10" fill="#fff7fb" stroke="#D6409F" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="700" y="806" class="step" font-size="13">↳ anchor location (step 9)</text>
+  <text x="700" y="828" class="sub" font-size="11.5">md anchors are translated from German;</text>
+  <text x="700" y="845" class="sub" font-size="11.5">the body is a different English edition.</text>
+  <text x="700" y="867" class="sub" font-size="11.5">One subagent per lecture reads the</text>
+  <text x="700" y="884" class="sub" font-size="11.5">actual body + its notes and returns a</text>
+  <text x="700" y="901" class="sub" font-size="11.5">verbatim unique substring to anchor to.</text>
+  <text x="700" y="921" class="tool" font-size="11">Agent × (lectures with notes)</text>
+  <path class="lnk" d="M644,824 L680,832" stroke-dasharray="4 3"/>
+
+  <!-- side callout: template fixes -->
+  <rect x="680" y="550" width="320" height="150" rx="10" fill="#f2fbf9" stroke="#12A594" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="700" y="576" class="step" font-size="13">the template carries</text>
+  <text x="700" y="600" class="sub" font-size="11.5">• A5 page setup + footer page numbers</text>
+  <text x="700" y="620" class="sub" font-size="11.5">• Heading1 / Subtitle (now left‑justified)</text>
+  <text x="700" y="640" class="sub" font-size="11.5">• ornament divider  image1.png → rId11</text>
+  <text x="700" y="660" class="sub" font-size="11.5">• toc‑h1/h2 &amp; FootnoteText styles</text>
+  <text x="700" y="682" class="tool" font-size="11">templates/print-template.docx</text>
+  <path class="lnk" d="M644,583 L680,600" stroke-dasharray="4 3"/>
+</svg>

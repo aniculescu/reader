@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1260" height="1020" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#666"/>
+    </marker>
+    <style>
+      .h    { font-size:15px; font-weight:700; fill:#111; }
+      .s    { font-size:12px; fill:#555; }
+      .t    { font-size:11px; fill:#0a6; font-family:ui-monospace,Menlo,monospace; }
+      .cli  { font-size:11px; fill:#a15; font-family:ui-monospace,Menlo,monospace; font-weight:600;}
+      .lane { font-size:15px; font-weight:800; fill:#fff; letter-spacing:1px; }
+      .lnk  { stroke:#666; stroke-width:2; fill:none; marker-end:url(#a); }
+      .out  { font-size:13px; font-weight:700; fill:#111; }
+    </style>
+  </defs>
+  <rect width="1260" height="1020" fill="#fafafa"/>
+  <text x="40" y="44" font-size="25" font-weight="800" fill="#111">rsarchive — the whole plan</text>
+  <text x="40" y="68" class="s" font-size="13">one fetch→parse core · three products: print · epub · catalog (DB → site)</text>
+
+  <!-- SOURCES -->
+  <text x="40" y="104" class="h" font-size="13" fill="#888">SOURCES</text>
+  <g>
+    <rect x="40"  y="112" width="270" height="52" rx="8" fill="#fff" stroke="#bbb"/>
+    <text x="54" y="134" class="h" font-size="13">rsarchive.org</text><text x="54" y="152" class="s">lecture HTML (all editions)</text>
+    <rect x="330" y="112" width="270" height="52" rx="8" fill="#fff" stroke="#bbb"/>
+    <text x="344" y="134" class="h" font-size="13">RSCatalog.docx + lectures.csv</text><text x="344" y="152" class="s">volume metadata · per-lecture rows</text>
+    <rect x="620" y="112" width="290" height="52" rx="8" fill="#fff" stroke="#bbb"/>
+    <text x="634" y="134" class="h" font-size="13">temp_translations/*.md</text><text x="634" y="152" class="s">canonical toc · Contents blurbs · notes</text>
+  </g>
+
+  <!-- CORE -->
+  <rect x="40" y="196" width="1180" height="70" rx="10" fill="#eef3ff" stroke="#5B8DEF" stroke-width="2"/>
+  <text x="60" y="224" class="h">SHARED CORE</text>
+  <text x="60" y="248" class="t">fetch.resolve_ga · fetch.fetch_html  →  parse.extract_lecture  →  models.Lecture</text>
+  <text x="720" y="248" class="s">body · footnotes · verse blocks · sketches · Tafeln  (English-only ⇒ _is_german off)</text>
+
+  <path class="lnk" d="M175,164 L360,196"/>
+  <path class="lnk" d="M465,164 L620,196"/>
+  <path class="lnk" d="M765,164 L840,196"/>
+
+  <!-- three lanes -->
+  <rect x="40"  y="300" width="14" height="670" rx="4" fill="#5B8DEF"/>
+  <rect x="450" y="300" width="14" height="670" rx="4" fill="#12A594"/>
+  <rect x="858" y="300" width="14" height="670" rx="4" fill="#D6409F"/>
+  <text x="47"  y="360" class="lane" transform="rotate(-90 47 360)" text-anchor="middle">PRINT</text>
+  <text x="457" y="360" class="lane" transform="rotate(-90 457 360)" text-anchor="middle">EPUB</text>
+  <text x="865" y="372" class="lane" transform="rotate(-90 865 372)" text-anchor="middle">CATALOG</text>
+
+  <path class="lnk" d="M300,266 L300,300"/>
+  <path class="lnk" d="M690,266 L690,300"/>
+  <path class="lnk" d="M1030,266 L1030,300"/>
+
+  <!-- PRINT lane -->
+  <g>
+    <rect x="70" y="304" width="360" height="72" rx="9" fill="#fff" stroke="#5B8DEF" stroke-width="2"/>
+    <text x="86" y="330" class="h" font-size="14">assemble from template</text>
+    <text x="86" y="350" class="s">Positions(CycleRef) → lecture blocks</text>
+    <text x="86" y="368" class="t">docxbuild.add_lectures + print-template</text>
+
+    <rect x="70" y="392" width="360" height="80" rx="9" fill="#fff" stroke="#5B8DEF" stroke-width="2"/>
+    <text x="86" y="418" class="h" font-size="14">Contents · notes · images</text>
+    <text x="86" y="438" class="s">bookmarks+PAGEREF · footnote anchoring</text>
+    <text x="86" y="456" class="s">(subagents) · embed sketches</text>
+
+    <rect x="70" y="488" width="360" height="60" rx="9" fill="#fff" stroke="#5B8DEF" stroke-width="2"/>
+    <text x="86" y="514" class="h" font-size="14">validate</text>
+    <text x="86" y="534" class="s">ref↔def · bookmarks · dividers resolve</text>
+
+    <rect x="70" y="564" width="360" height="66" rx="9" fill="#eaf1ff" stroke="#5B8DEF" stroke-width="2.5"/>
+    <text x="86" y="592" class="out">📄 Reading/ __print (GA-NNN) Title.docx</text>
+    <text x="86" y="614" class="s">A5, print-ready · quarantine cleared</text>
+
+    <path class="lnk" d="M250,376 L250,392"/>
+    <path class="lnk" d="M250,472 L250,488"/>
+    <path class="lnk" d="M250,548 L250,564"/>
+  </g>
+
+  <!-- EPUB lane -->
+  <g>
+    <rect x="480" y="304" width="360" height="72" rx="9" fill="#fff" stroke="#12A594" stroke-width="2"/>
+    <text x="496" y="330" class="h" font-size="14">build_from_ga(ga)</text>
+    <text x="496" y="350" class="s">reflow XHTML · footnotes · verse blocks</text>
+    <text x="496" y="368" class="t">rsarchive/epub.py</text>
+
+    <rect x="480" y="392" width="360" height="80" rx="9" fill="#fff" stroke="#12A594" stroke-width="2"/>
+    <text x="496" y="418" class="h" font-size="14">media + package</text>
+    <text x="496" y="438" class="s">embed sketches · download Tafeln</text>
+    <text x="496" y="456" class="s">default name “(GA-NNN) Title.epub”</text>
+
+    <rect x="480" y="488" width="360" height="60" rx="9" fill="#fff" stroke="#12A594" stroke-width="2"/>
+    <text x="496" y="514" class="h" font-size="14">validate (structural)</text>
+    <text x="496" y="534" class="s">OPF · spine · nav · media refs</text>
+
+    <rect x="480" y="564" width="360" height="66" rx="9" fill="#e7f7f4" stroke="#12A594" stroke-width="2.5"/>
+    <text x="496" y="592" class="out">📖 (GA-NNN) Title.epub</text>
+    <text x="496" y="614" class="cli">rsarchive catalog epub --ga N</text>
+
+    <path class="lnk" d="M660,376 L660,392"/>
+    <path class="lnk" d="M660,472 L660,488"/>
+    <path class="lnk" d="M660,548 L660,564"/>
+  </g>
+
+  <!-- CATALOG lane -->
+  <g>
+    <rect x="888" y="304" width="342" height="92" rx="9" fill="#fff" stroke="#D6409F" stroke-width="2"/>
+    <text x="904" y="330" class="h" font-size="14">load the store</text>
+    <text x="904" y="350" class="cli">catalog init</text><text x="1010" y="350" class="s">schema.sql</text>
+    <text x="904" y="368" class="cli">catalog import --all</text><text x="1070" y="368" class="s">vols+lecs</text>
+    <text x="904" y="386" class="cli">catalog ingest --ga</text><text x="1065" y="386" class="s">bodies</text>
+
+    <rect x="888" y="412" width="342" height="66" rx="9" fill="#fff" stroke="#D6409F" stroke-width="2"/>
+    <text x="904" y="438" class="h" font-size="14">enrich</text>
+    <text x="904" y="458" class="cli">catalog subjects · refs</text>
+    <text x="904" y="474" class="s">tag taxonomy · extract references</text>
+
+    <rect x="888" y="494" width="342" height="86" rx="9" fill="#fce8f4" stroke="#D6409F" stroke-width="2.5"/>
+    <text x="904" y="520" class="out">🗄 catalog.db — source of truth</text>
+    <text x="904" y="540" class="s">volumes · lectures · subjects · refs</text>
+    <text x="904" y="558" class="s">sequences · tafeln · notes</text>
+    <text x="904" y="575" class="s">(build artifact; gitignored)</text>
+
+    <rect x="888" y="596" width="342" height="70" rx="9" fill="#fff" stroke="#D6409F" stroke-width="2"/>
+    <text x="904" y="622" class="h" font-size="14">regenerate exports</text>
+    <text x="904" y="642" class="cli">catalog export</text>
+    <text x="904" y="660" class="s">pure fn of DB · byte-stable</text>
+
+    <path class="lnk" d="M1059,396 L1059,412"/>
+    <path class="lnk" d="M1059,478 L1059,494"/>
+    <path class="lnk" d="M1059,580 L1059,596"/>
+
+    <!-- export outputs -->
+    <rect x="888" y="686" width="164" height="80" rx="9" fill="#fdeef7" stroke="#D6409F"/>
+    <text x="902" y="710" class="out" font-size="12">exports/</text>
+    <text x="902" y="730" class="s" font-size="11">lectures.json</text>
+    <text x="902" y="746" class="s" font-size="11">graph.json</text>
+    <text x="902" y="762" class="s" font-size="11">jekyll/*.md → site</text>
+
+    <rect x="1066" y="686" width="164" height="80" rx="9" fill="#fdeef7" stroke="#D6409F"/>
+    <text x="1080" y="710" class="out" font-size="12">git</text>
+    <text x="1080" y="730" class="cli" font-size="10">catalog dump</text>
+    <text x="1080" y="748" class="s" font-size="11">dump.sql snapshot</text>
+    <text x="1080" y="762" class="s" font-size="11">(schema + data)</text>
+
+    <path class="lnk" d="M1000,666 L970,686"/>
+    <path class="lnk" d="M1120,666 L1148,686"/>
+  </g>
+
+  <!-- catalog feeds print+epub metadata (dashed back-links) -->
+  <path d="M888,540 C700,540 660,300 640,240" stroke="#D6409F" stroke-width="1.5" fill="none" stroke-dasharray="5 4" marker-end="url(#a)" opacity="0.6"/>
+  <text x="470" y="292" class="s" font-size="11" fill="#D6409F" opacity="0.85">catalog also supplies canonical titles/metadata back to the core</text>
+
+  <text x="40" y="1000" class="s" font-size="12">Idempotent throughout · exports are pure functions of the DB · catalog.db rebuildable from dump.sql — the static catalog of works never grows or shrinks.</text>
+</svg>
