@@ -1,0 +1,46 @@
+@charset "UTF-8";
+
+body, div, img {
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+img {
+    height: 100%;
+    max-width: 100%;
+    border: 0 none;
+    vertical-align: bottom;
+    object-fit: contain;
+}
+
+/* --- rsarchive: generated typographic cover (used when no cover image supplied) --- */
+section.text-cover {
+    text-align: center;
+    padding: 12% 8%;
+}
+
+.cover-ga {
+    font-size: 1em;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin: 0 0 3em;
+}
+
+.cover-title {
+    font-size: 2em;
+    line-height: 1.2;
+    margin: 0.5em 0;
+    text-align: center;
+}
+
+.cover-subtitle {
+    font-size: 1.125em;
+    font-style: italic;
+    margin: 1em 0 3em;
+}
+
+.cover-author {
+    font-size: 1.25em;
+    margin-top: 3em;
+}

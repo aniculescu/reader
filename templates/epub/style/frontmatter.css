@@ -1,0 +1,48 @@
+@charset "UTF-8";
+
+h1, h2, h3, h4 {
+    text-align: center;
+}
+
+.author {
+    font-size: 1.25em;
+    margin-top: 2em;
+    margin-bottom: 1.75em;
+}
+
+.title {
+    font-size: 2em;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+.subtitle {
+    font-size: 1.125em;
+    margin-top: 1em;
+    margin-bottom: 2em;
+    text-align: center;
+}
+
+.chapter {
+    text-align: center;
+    margin-top: 1.125em;
+    margin-bottom: 1.75em;
+}
+
+/* Verbose contents page — the German volume's INHALT. */
+section.verbose-contents { text-align: left; }
+ol.contents-list { list-style: none; padding-left: 0; margin-left: 0; }
+li.contents-entry { margin: 0 0 1.6em; }
+span.contents-title { font-weight: bold; }
+p.contents-meta {
+    font-style: italic;
+    font-size: 0.85em;
+    margin: 0.1em 0 0.4em;
+    text-indent: 0;
+}
+p.contents-summary {
+    font-size: 0.85em;
+    line-height: 1.45;
+    margin: 0;
+    text-indent: 0;
+}
