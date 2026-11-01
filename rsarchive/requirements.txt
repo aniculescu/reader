@@ -1,0 +1,9 @@
+# rsarchive network / HTML-parsing dependencies.
+#
+# The docx builder (docxbuild), JSON store (metadata), structural editor (edit),
+# illustration surgery (illustrations) and the data model (models) are pure stdlib.
+# Only the network + HTML-parsing layer (fetch, parse via the CLI, images) needs a
+# third-party package: beautifulsoup4. Fetching itself uses stdlib urllib, so
+# `requests` is optional and listed only for parity with get-lecture-images.py.
+beautifulsoup4
+requests
