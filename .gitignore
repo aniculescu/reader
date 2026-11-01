@@ -4,4 +4,37 @@ lectureData.txt
 *.html
 rsarchive_tafeln/
 *.csv
+!rsarchive/catalog/lectures.csv
 original-text/
+
+# Generated bulk exports
+exports/
+
+# Translation working files
+temp_translations/
+
+# Python + Office junk
+__pycache__/
+*.pyc
+~$*
+
+# Generated catalog databases (dump.sql is the committed snapshot)
+catalog.db
+*.db.bak-*
+
+# Kept local: per-book edition work (it embeds published translations) and personal data
+scripts/*ga170*
+scripts/*ga115*
+scripts/*psychosophy*
+scripts/build_ga011_docx.py
+scripts/fix_ga121_docx.py
+scripts/apply_full_page_docx_cover.py
+scripts/build_ga122_translation.mjs
+scripts/build_ga178_behind_scenes.py
+scripts/extract_mosen_fraktur.py
+sylva-sylvarum/
+/RSCatalog.docx
+/clippings.txt
+/lectures.json
+/temp_covers/
+templates/epub/style.css
