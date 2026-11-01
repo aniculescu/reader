@@ -12,6 +12,7 @@ import requests
 import re
 import os
 import json
+from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup
@@ -209,9 +210,12 @@ def get_ga_metadata(ga, force_refresh=False):
 def download_image(url, ga, t_num):
     ga_dir = os.path.join(BASE_DIR, f"GA{ga}")
     os.makedirs(ga_dir, exist_ok=True)
-    filename = f"{ga}-T{t_num:02d}.webp" if t_num else os.path.basename(url)
+
+    # Keep the extension the URL's path serves (rsarchive serves .webp today).
+    ext = os.path.splitext(urlparse(url).path)[1] or ".webp"
+    filename = f"{ga}-T{t_num:02d}{ext}" if t_num else os.path.basename(url)
     filepath = os.path.join(ga_dir, filename)
-    
+
     if os.path.exists(filepath):
         return filepath
 
