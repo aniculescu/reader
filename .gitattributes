@@ -1,0 +1,2 @@
+# Show the nearest Markdown heading (the style name) in diffs of the template summary.
+templates/*.styles.md diff=markdown

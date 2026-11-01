@@ -168,6 +168,7 @@ All modules live in `rsarchive/`; import siblings as `from rsarchive.X import ..
 | `docxbuild.py` | stdlib | `Lecture` + template `.docx` → output `.docx`. XML fragment builders (schema-ordered), byte-for-byte repackage, drawing/footnote-id continuation, idempotent skip, placement. |
 | `illustrations.py` | stdlib | Into an existing `.docx`: embed inline sketches, insert ⟦TEMP-TAFEL⟧ notes and chapter ornaments. |
 | `edit.py` | stdlib | Remove a lecture block by exact Heading1 title (edition swaps). |
+| `templatesummary.py` | stdlib | Readable, diffable summary of a `.docx` template (page setup, styles in points and cm, footers, fonts, settings, media), committed as `templates/print-template.styles.md` next to the template. See `templates/README.md`. |
 | `epub.py` | stdlib | Kindle-friendly EPUB 3 from `Lecture`s, styled by `templates/epub/style/`. `scripts/docx_epub.py` builds one from a finished edition `.docx`. |
 | `catalog/` | stdlib (+ `anthropic` for tagging) | The SQLite catalog: lectures, volumes, cycles, subjects, references and clippings, with importers, review tools and exports. See `catalog/DESIGN.md`. |
 | `cli.py` | — | `argparse` entry point for every subcommand above. |
@@ -263,4 +264,6 @@ python3 -m unittest
   `test_catalog_v3.py`, `test_catalog_tagging.py`, `test_catalog_refs_v2.py`,
   `test_references.py`, `test_cycles.py`, `test_clippings.py`, `test_catalog_export_v3.py`,
   `test_catalog_cli.py`, `test_catalog_review_fixes.py`.
+- **Template:** `test_template.py` (the committed summary matches `templates/print-template.docx`, which has
+  no defects, local paths or attached template).
 - **Books and CLI:** `test_compilation.py`, `test_epub.py`, `test_cli.py`.
