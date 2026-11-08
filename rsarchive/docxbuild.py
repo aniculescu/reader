@@ -50,7 +50,6 @@ from rsarchive.models import (
     RUN_BREAK,
     RUN_FOOTNOTE,
     RUN_ITALIC,
-    RUN_TEXT,
     SUBTITLE_CLAUSES,
     SUBTITLE_COLLECTION,
     Footnote,
@@ -294,6 +293,42 @@ def build_verse_paragraph(lines: List[str]) -> str:
     return "".join(out)
 
 
+# The template's text width (A5, 8400 twips less 1440 + 720 margins): the table grid's
+# starting widths. The table itself is sized as a percentage, so Word refits it.
+TEXT_WIDTH_TWIPS = 6240
+
+
+def build_table(rows: List[List[str]], has_header: bool = True) -> str:
+    """A BLOCK_TABLE as a Word table in the template's ``TableGrid`` style (ruled, no
+    paragraph spacing), the full text width, columns of equal share. A header row is set
+    bold and repeats across pages. Cells are left-aligned: justified text in a narrow
+    column only opens gaps. A small spacer paragraph follows, so the table never directly
+    precedes the next heading's page break or the section properties."""
+    ncols = max((len(r) for r in rows), default=0)
+    if not ncols:
+        return ""
+    col = TEXT_WIDTH_TWIPS // ncols
+    out = ['<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/>'
+           '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" '
+           'w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid>']
+    out.append(f'<w:gridCol w:w="{col}"/>' * ncols)
+    out.append('</w:tblGrid>')
+    for i, row in enumerate(rows):
+        header = has_header and i == 0
+        out.append('<w:tr><w:trPr><w:tblHeader/></w:trPr>' if header else '<w:tr>')
+        for c in range(ncols):
+            text = row[c] if c < len(row) else ""
+            rpr = "<w:rPr><w:b/><w:bCs/></w:rPr>" if header else ""
+            run = (f'<w:r>{rpr}<w:t xml:space="preserve">{xml_escape(text)}</w:t></w:r>'
+                   if text else "")
+            out.append(f'<w:tc><w:tcPr><w:tcW w:w="{col}" w:type="dxa"/></w:tcPr>'
+                       '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/>'
+                       f'<w:jc w:val="left"/></w:pPr>{run}</w:p></w:tc>')
+        out.append('</w:tr>')
+    out.append('</w:tbl><w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>')
+    return "".join(out)
+
+
 def build_footnote_def(global_id: int, runs: List[Run]) -> str:
     """A <w:footnote> definition with the given doc-global id. `runs` are text/italic runs
     only (no nested footnote refs). Mirrors add_lecture.build_footnote_def."""
@@ -367,12 +402,7 @@ def build_lecture_block(lecture: Lecture, docpr_id: int, pic_id: int,
             xs.append(build_body_paragraph(
                 [Run(kind=RUN_ITALIC, text="[illustration: %s]" % name)], id_map))
         elif block.type == BLOCK_TABLE:
-            # WordprocessingML tables are out of scope for this builder; emit one
-            # tab-separated paragraph per row so the content survives the .docx even
-            # though the grid does not.
-            for row in block.rows:
-                xs.append(build_body_paragraph(
-                    [Run(kind=RUN_TEXT, text="\t".join(row))], id_map))
+            xs.append(build_table(block.rows, block.has_header))
         else:
             xs.append(build_body_paragraph(block.runs, id_map))
     return "".join(xs), defs

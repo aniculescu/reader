@@ -62,6 +62,19 @@ class FragmentTest(unittest.TestCase):
         self.assertSchemaOrdered(docxbuild.build_verse_paragraph(["Line one", "Line two"]))   # spacing before jc
         self.assertSchemaOrdered(docxbuild.build_tafel_note(2, "T1, T2"))                    # spacing before jc
 
+    def test_table(self):
+        rows = [["Adi-Buddha", "Adi-Atma", "Adi-Deva"],
+                ["First Elemental Realm", "Deep Trance", "Divine Power"],
+                ["Mineral Realm", "", "Power & Light"], ["Short row"]]
+        xml = docxbuild.build_table(rows, has_header=True)
+        self.assertSchemaOrdered(xml)
+        self.assertEqual(xml.count("<w:tr>"), 4)
+        self.assertEqual(xml.count("<w:tc>"), 12)              # the short row is padded
+        self.assertEqual(xml.count("<w:tblHeader/>"), 1)
+        self.assertIn("Power &amp; Light", xml)
+        self.assertTrue(xml.endswith("</w:tbl><w:p><w:pPr><w:spacing w:after=\"0\"/></w:pPr></w:p>"))
+        self.assertNotIn("<w:tblHeader/>", docxbuild.build_table(rows, has_header=False))
+
     def test_illustrations(self):
         self.assertSchemaOrdered(illustrations.drawing_paragraph("rId9", 100, 100, 5, 6, "Sketch"))
         self.assertSchemaOrdered(illustrations.note_paragraph(1, "T1"))
