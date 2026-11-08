@@ -1283,6 +1283,10 @@ ocr = [
     { name = "deep-translator" },
     { name = "pytesseract" },
 ]
+ocrbook = [
+    { name = "numpy" },
+    { name = "pillow" },
+]
 pdf = [
     { name = "pypdf" },
 ]
@@ -1309,6 +1313,8 @@ requires-dist = [
     { name = "jsonschema", marker = "extra == 'schema'", specifier = ">=4.0" },
     { name = "lxml", marker = "extra == 'edition'", specifier = ">=5.0" },
     { name = "numpy", marker = "extra == 'edition'", specifier = ">=1.26" },
+    { name = "numpy", marker = "extra == 'ocrbook'", specifier = ">=1.26" },
+    { name = "pillow", marker = "extra == 'ocrbook'", specifier = ">=10.0" },
     { name = "pillow", marker = "extra == 'tafel'", specifier = ">=10.0" },
     { name = "pymupdf", marker = "extra == 'edition'", specifier = ">=1.24" },
     { name = "pypdf", marker = "extra == 'edition'", specifier = ">=4.0" },
@@ -1319,7 +1325,7 @@ requires-dist = [
     { name = "requests", marker = "extra == 'legacy'", specifier = ">=2.31" },
     { name = "tqdm", marker = "extra == 'legacy'", specifier = ">=4.66" },
 ]
-provides-extras = ["pdf", "tafel", "ocr", "llm", "schema", "legacy", "edition"]
+provides-extras = ["pdf", "tafel", "ocr", "llm", "schema", "legacy", "ocrbook", "edition"]
 
 [package.metadata.requires-dev]
 dev = [

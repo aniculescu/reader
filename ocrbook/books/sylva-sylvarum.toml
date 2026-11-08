@@ -1,0 +1,33 @@
+# Francis Bacon, Sylva Sylvarum (1627), from the University of Toronto scan on archive.org.
+# A diplomatic edition: the master keeps the original typography (long s, ligatures,
+# spelling), so [clean] stays off. archive.org's OCR is the primary text; ocrbook's own
+# Tesseract pass is the second witness, and the triage page settles their conflicts.
+
+title = "Sylva Sylvarum, or A Naturall Historie"
+author = "Francis Bacon"
+language = "en"
+workdir = "sylva-sylvarum"
+
+[archive]
+item = "sylvasylvarvmor00baco"
+files = ["_djvu.xml", "_djvu.txt", "_hocr.html", "_jp2.zip", "_meta.xml", "_toc.xml"]
+
+[scans]
+file = "sylvasylvarvmor00baco_jp2.zip"
+
+[ocr]
+lang = "eng"
+psm = [3]
+
+[text]
+sources = ["archive_org_djvu", "reocr"]
+djvu_xml = "sylvasylvarvmor00baco_djvu.xml"
+
+[figures]
+hocr = "sylvasylvarvmor00baco_hocr.html"
+
+[master]
+appendices = ["appendix_typography.md"]
+
+[triage]
+page_min = 30     # skip the front matter and plates

@@ -2,7 +2,9 @@
 
 Tools for building study editions of Rudolf Steiner's lectures (.docx for print, EPUB)
 from rsarchive.org and a local catalog. The toolkit is the `rsarchive` package; see
-[`rsarchive/README.md`](rsarchive/README.md). Working conventions are in
+[`rsarchive/README.md`](rsarchive/README.md). Scanned books (archive.org scans, OCR,
+reconciliation, EPUB/PDF) go through the `ocrbook` package; see
+[`ocrbook/README.md`](ocrbook/README.md). Working conventions are in
 [`docs/agent-notes.md`](docs/agent-notes.md).
 
 ## Setup
@@ -27,5 +29,6 @@ The core needs only `beautifulsoup4`. The other dependencies are optional extras
 | `schema` | lectures.json validation |
 | `legacy` | `get-lecture-images.py` |
 | `edition` | the local per-book edition scripts |
+| `ocrbook` | `uv run ocrbook …` (also needs Tesseract; Pandoc to build) |
 
 Rendering with Microsoft Word (`word-pdf`, `contents-pages`) needs Word on macOS.

@@ -36,6 +36,8 @@ scripts/build_ga122_translation.mjs
 scripts/build_ga178_behind_scenes.py
 scripts/extract_mosen_fraktur.py
 sylva-sylvarum/
+# ocrbook working folders (scans, OCR output, figures): ocrbook/README.md
+/ocr-books/
 /RSCatalog.docx
 /clippings.txt
 /lectures.json

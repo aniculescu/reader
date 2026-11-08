@@ -1,7 +1,7 @@
 [project]
 name = "rsarchive"
 version = "0.1.0"
-description = "Build Rudolf Steiner lecture editions (.docx, EPUB) from rsarchive.org and a local catalog"
+description = "Build Rudolf Steiner lecture editions (.docx, EPUB) from rsarchive.org and a local catalog; OCR editions of scanned books"
 readme = "rsarchive/README.md"
 requires-python = ">=3.12"
 # The core (fetch, parse, docx/EPUB building, the catalog) is stdlib apart from the HTML
@@ -15,6 +15,7 @@ ocr = ["pytesseract>=0.3.10", "deep-translator>=1.11"]  # tafel-pdf --ocr / --tr
 llm = ["anthropic>=0.40"]                            # catalog tagging proposals
 schema = ["jsonschema>=4.0"]                         # lectures.json validation
 legacy = ["requests>=2.31", "tqdm>=4.66"]            # get-lecture-images.py at the repo root
+ocrbook = ["Pillow>=10.0", "numpy>=1.26"]           # ocrbook: scanned books (plus Tesseract, Pandoc)
 edition = [                                          # the local per-book edition scripts
     "lxml>=5.0",
     "python-docx>=1.1",
@@ -25,6 +26,7 @@ edition = [                                          # the local per-book editio
 
 [project.scripts]
 rsarchive = "rsarchive.cli:main"
+ocrbook = "ocrbook.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8.0", "ruff>=0.6", "pyright>=1.1.380"]
@@ -34,17 +36,17 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["rsarchive"]
+packages = ["rsarchive", "ocrbook"]
 
 [tool.pytest.ini_options]
-testpaths = ["rsarchive/tests"]
+testpaths = ["rsarchive/tests", "ocrbook/tests"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
 extend-exclude = [
     "sylva-sylvarum", "temp_translations", "exports", "rsarchive_tafeln",
-    "temp_covers", "node_modules", ".private",
+    "temp_covers", "node_modules", ".private", "ocr-books",
     # legacy root scripts, superseded by rsarchive (to be reviewed, issue #8)
     "generate-tafel-pdf.py", "get-lecture-images.py", "rs-md.py", "test-get-lecture-images.py",
 ]
@@ -54,7 +56,7 @@ extend-exclude = [
 select = ["F", "E9"]
 
 [tool.pyright]
-include = ["rsarchive"]
-exclude = ["rsarchive/tests"]
+include = ["rsarchive", "ocrbook"]
+exclude = ["rsarchive/tests", "ocrbook/tests"]
 pythonVersion = "3.12"
 typeCheckingMode = "basic"

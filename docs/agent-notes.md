@@ -69,6 +69,14 @@ The owner works in Word alongside these sessions. A script once took `active doc
 - Image names: `{ga}-{NN}` is an inline sketch, which is embedded. `{ga}-T{NN}` is a blackboard drawing (Tafel), which is downloaded, not embedded.
 - Fetch politely (the toolkit's `fetch.polite`). Cache pages you will read more than once.
 
+## Scanned books (ocrbook)
+
+- One pipeline, one profile per book (`ocrbook/books/*.toml`). A new book needs a profile, not a new script. Its book-specific corrections go in the profile's `[clean]` rules.
+- Profiles and code are public; working folders are not. Scans, OCR output and figures live in the book's workdir (`ocr-books/<name>/` is ignored; `sylva-sylvarum/` predates it).
+- When changing ocrbook, rerun the two books and compare byte for byte. ocrbook/README.md "Verification" lists what must stay identical. A change that alters `conflicts.jsonl` orphans the owner's triage decisions.
+- `decisions.jsonl` is the owner's editorial work: append-only, never rewritten.
+- A reviewed transcription (e.g. Mosen's in `temp_translations/`) is finished work, like a hand-reviewed export. Don't regenerate it.
+
 ## Working with the owner's files
 
 - **Before archiving or deleting anything**, show for each file the evidence that it's unused (references in code, docs, configs, data paths and ignored files; what reads it; what supersedes it) and the plan (where it goes; how to undo). Wait for approval. Prefer reversible moves. An ignored `lectures.csv` once looked dead and turned out to be the catalog's seed data.

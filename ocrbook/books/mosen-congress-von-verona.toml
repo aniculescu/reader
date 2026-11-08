@@ -1,0 +1,200 @@
+# Julius Mosen, Der Congreß von Verona (Sämmtliche Werke, vol. 5, 1863), from the University
+# of Toronto scan on archive.org. Fraktur, one witness (ocrbook's own OCR), read in two
+# Tesseract layout modes with the better one kept. The camera captures alternate by 180°.
+#
+# This profile reproduces the first machine transcription (scripts/extract_mosen_fraktur.py).
+# The reviewed transcription made from it later was checked against other editions and is
+# finished work: it is not regenerated from here. That review found printed page 1 on scan
+# 15 (this profile starts at scan 16, page 2).
+
+title = "Der Congreß von Verona"
+author = "Julius Mosen"
+language = "de"
+
+[archive]
+item = "smtlichewerke05moseuoft"
+files = ["_orig_jp2.tar"]
+
+[scans]
+file = "smtlichewerke05moseuoft_orig_jp2.tar"
+
+[ocr]
+lang = "frk"
+psm = [3, 4]
+rotate_even = 90
+rotate_odd = 270
+crop = "paper"
+enhance = true
+
+[text]
+sources = ["reocr"]
+
+# Scans 16-254 are in printed order (pp. 2-240). The last eight pages were captured in
+# reverse: scans 262 down to 255 are pp. 241-248.
+[[sequence]]
+scans = [16, 254]
+first_page = 2
+
+[[sequence]]
+scans = [262, 255]
+first_page = 241
+
+[clean]
+enabled = true
+running_heads = ['Mosen.*(?:Werke|Berke)']
+
+# Order matters: these fixes must run before the fraktur ruleset turns "c<" into "ch".
+[[clean.rules]]
+[clean.rules.literal]
+"Stüc<hen" = "Stückchen"
+"Stüc>hen" = "Stückchen"
+"doc<h" = "doch"
+"durc<" = "durch"
+"baro&e" = "barocke"
+"zurü&" = "zurück"
+"De&el" = "Deckel"
+
+# Long s is normalised to s in this edition.
+[[clean.rules]]
+literal = { "ſ" = "s" }
+
+[[clean.rules]]
+ruleset = "fraktur"
+
+# OCR misreadings in this book, whole words only.
+[[clean.rules]]
+[clean.rules.words]
+"Schriiten" = "Schritten"
+"Scrüten" = "Schritten"
+"Schriten" = "Schritten"
+"Stocckwerke" = "Stockwerke"
+"Stocckwerfe" = "Stockwerke"
+"Brüde" = "Brücke"
+"Brüke" = "Brücke"
+"Bruchstüe" = "Bruchstücke"
+"jeßt" = "jetzt"
+"jezt" = "jetzt"
+"jebt" = "jetzt"
+"jet" = "jetzt"
+"zugefehrte" = "zugekehrte"
+"merfwürdig" = "merkwürdig"
+"dandbar" = "dankbar"
+"jich" = "sich"
+"sih" = "sich"
+"niht" = "nicht"
+"doh" = "doch"
+"durc" = "durch"
+"Ih" = "Ich"
+"ih" = "ich"
+"icq" = "ich"
+"Ic" = "Ich"
+"Cuch" = "Euch"
+"Cuer" = "Euer"
+"ex" = "er"
+"fommt" = "kommt"
+"fann" = "kann"
+"fönnt" = "könnt"
+"fönnen" = "können"
+"fönnte" = "könnte"
+"fonnten" = "konnten"
+"faum" = "kaum"
+"fleinen" = "kleinen"
+"erfennen" = "erkennen"
+"lejen" = "lesen"
+"jah" = "sah"
+"Waschbeken" = "Waschbecken"
+"Glode" = "Glocke"
+"schhnupfte" = "schnupfte"
+"juchen" = "suchen"
+"jo" = "so"
+"joll" = "soll"
+"jolle" = "solle"
+"fo" = "so"
+"Bon" = "Von"
+"Gemädern" = "Gemächern"
+"noh" = "noch"
+"nod" = "noch"
+"gesunfen" = "gesunken"
+"maden" = "machen"
+"Schisalswink" = "Schicksalswink"
+"gesezt" = "gesetzt"
+"rüen" = "rücken"
+"soldhe" = "solche"
+"docm" = "doch"
+"docM" = "doch"
+"doc4" = "doch"
+"jedoc4" = "jedoch"
+"jedoc" = "jedoch"
+"fam" = "kam"
+"glüFlic" = "glücklich"
+"glüdseligen" = "glückseligen"
+"versette" = "versetzte"
+"durhmustern" = "durchmustern"
+"Stokwerkes" = "Stockwerkes"
+"fönntet" = "könntet"
+"plötlich" = "plötzlich"
+"Scrank" = "Schrank"
+"Ee" = "Ecke"
+"EFe" = "Ecke"
+"wideln" = "wickeln"
+"zurüzuschieben" = "zurückzuschieben"
+"Dolh" = "Dolch"
+"jedom" = "jedoch"
+"Merkwürdigfeiten" = "Merkwürdigkeiten"
+"Blie" = "Blicke"
+"anfommt" = "ankommt"
+"Stäck" = "Stück"
+"entdedte" = "entdeckte"
+"Stü" = "Stück"
+"Eindrud" = "Eindruck"
+"hoc" = "hoch"
+"einfa" = "einfach"
+"zurükgezogen" = "zurückgezogen"
+"Dat" = "Hat"
+"fönnten" = "könnten"
+"findlicher" = "kindlicher"
+"nachzufommen" = "nachzukommen"
+"noc" = "noch"
+"foll" = "soll"
+"fonnte" = "konnte"
+"hauptsächlih" = "hauptsächlich"
+"dom" = "doch"
+"Stüße" = "Stütze"
+"wünjche" = "wünsche"
+"verfehrter" = "verkehrter"
+"90ß" = "goß"
+"versjcmäht" = "verschmäht"
+"trinfen" = "trinken"
+"füßverkflärtem" = "süßverklärtem"
+"Cigarrenkästhen" = "Cigarrenkästchen"
+"sammtneg" = "sammtiges"
+"fleine" = "kleine"
+"Jet" = "Jetzt"
+"daf" = "daß"
+
+[[clean.rules]]
+[clean.rules.literal]
+"2?“" = "?“"
+"2“" = "?“"
+"2\"" = "?\""
+"Ritter. ." = "Ritter."
+"daß;" = "daß"
+
+[[clean.rules]]
+[clean.rules.regex]
+"\\s*=\\-\\s*" = " — "
+"\\s+--\\s+" = " — "
+
+# Book dividers read by hand (the OCR of these pages is unusable).
+[page_text]
+53 = "Zweites Buch."
+101 = "Drittes Buch."
+163 = "Viertes Buch."
+207 = "Fünftes Buch."
+
+[master]
+front_matter = false
+preamble = "# Der Congreß von Verona\n\n## Deutscher Text ab Scan _0016.jp2\n\n> Transkriptionshinweis: Die historische Rechtschreibung wurde beibehalten. Das typographische lange s wurde als gewöhnliches s wiedergegeben. Eindeutige Trennungen am Zeilenende wurden zusammengezogen. Die Scan-Markierungen dienen der Nachprüfung am Bild. Der Text wurde maschinell aus Frakturdruck erkannt und ist noch nicht vollständig zeichengetreu korrekturgelesen."
+page_marker = "## Scan `{scan}` · Druckseite {page}"
+skip_empty = true
+ocr_error = "[OCR-Fehler: {error}]"
