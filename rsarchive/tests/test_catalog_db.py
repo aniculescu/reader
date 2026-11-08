@@ -360,7 +360,7 @@ class TestLecturesBySubjectGrouping(unittest.TestCase):
 
     def test_count_lectures_per_subject(self):
         conn = _new_db()
-        f = self._fixture(conn)
+        self._fixture(conn)
         counts = {r["name"]: r["n"] for r in conn.execute(
             """
             SELECT s.name AS name, COUNT(ls.lecture_id) AS n

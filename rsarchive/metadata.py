@@ -29,7 +29,7 @@ import json
 import os
 import tempfile
 from collections import defaultdict
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List
 
 try:  # normal package import
     from rsarchive.models import (

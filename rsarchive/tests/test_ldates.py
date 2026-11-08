@@ -37,7 +37,6 @@ real once the sibling module lands.
 from __future__ import annotations
 
 import importlib
-import re
 import unittest
 
 

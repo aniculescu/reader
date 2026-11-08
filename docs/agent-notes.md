@@ -1,7 +1,8 @@
 # Agent notes
 
 Working conventions for anyone, human or AI agent, who builds editions or changes the
-toolkit in this repo. `AGENTS.md` holds the standing instructions and points here. These
+toolkit in this repo. Run everything through the uv project (`make setup`, then `uv run …`; Python
+3.12): the system `python3` is too old. `AGENTS.md` holds the standing instructions and points here. These
 notes record the reasons behind them, learned the hard way.
 
 ## The repo is public
@@ -25,15 +26,16 @@ So:
 - write with `docxpackage.write(path, parts, order, baseline=SOURCE)`.
 
 **Verify every export three ways:**
-1. `python3 -m rsarchive.cli docx-check FILE…` lists the package defects Word rejects.
+1. `uv run rsarchive docx-check FILE…` lists the package defects Word rejects.
 2. Schema-validate with the docx skill's `validate.py` under Python 3.12 (`uv run --python 3.12 --with lxml --with defusedxml …`).
-3. Open a copy in **Microsoft Word**, not LibreOffice: open read-only, save as PDF, close without saving. LibreOffice renders files that Word refuses (child order, orphaned parts, missing relationships), so a good LibreOffice render proves nothing.
+3. Open it in **Microsoft Word**, not LibreOffice, with `uv run rsarchive word-pdf FILE`, which renders a copy to PDF. LibreOffice renders files that Word refuses (child order, orphaned parts, missing relationships), so a good LibreOffice render proves nothing.
 
 **Check completeness against the source, word for word.** Block or paragraph counts hide losses. The GA 90a build (2026-11) passed every package check, yet 619 words across 33 lectures were missing until its text was compared with the 81 source pages.
 
 **The normal template.** `templates/print-template.docx` is the versioned source of the print layout. Edit it in Word straight from the repo. Then regenerate `templates/print-template.styles.md` (`rsarchive/templatesummary.py`) and run `rsarchive/tests/test_template.py`, which fails on a stale summary, a package defect, local paths or an attached template. Commit both files together. Never re-attach a Word user template, because Word records a local path when you do. The layout `rsarchive/docxbuild.py` produces:
 - Lecture openings: Heading1, a Subtitle position line ("The Nth of K lectures in GA-n: *Title*."), a Subtitle date line in SubtleEmphasis ("September 28, 1903 in Berlin"), then the lemniscate ornament.
-- Contents: one entry per lecture with its date (`--toc`).
+- Contents: one bold entry per lecture with its date (`--toc`), linked to a bookmark on the lecture's heading, with a dot leader to the page number at the right margin.
+- Page numbers come from Word's own render: `--toc-pages` at build time, or `contents-pages FILE` afterwards. It re-renders until the numbers stop changing.
 - Tables: `TableGrid` tables, full text width, header row bold and repeated.
 - Template merges can overwrite the ornament (`media/image1.png`) with a book's own image1. Check it.
 
@@ -51,7 +53,7 @@ The owner works in Word alongside these sessions. A script once took `active doc
 - Never fall back to `active document`. If the target isn't found, stop and report.
 - Work on copies in an ignored folder. A `~$` lock file next to a document means Word has it open.
 
-Quirks of the installed Word:
+`rsarchive/wordpdf.py` (`word-pdf`) follows these rules. Use it rather than writing a new script. Quirks of the installed Word, for anything it doesn't cover:
 - `full name of d` and `document "x.docx"` (by name) return `missing value`.
 - Find the target by index: loop `repeat with i from 1 to (count of documents)`, put `name of document i` and `(path of document i) as text` into variables, compare those, and remember the index. Then `save as (document hit) file name … file format format PDF` and `close (document hit) saving no`.
 - Don't compare a document reference with `missing value`; it misfires. Don't inline `(path of d as text)` inside an `if`.

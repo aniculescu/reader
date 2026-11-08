@@ -1,0 +1,60 @@
+[project]
+name = "rsarchive"
+version = "0.1.0"
+description = "Build Rudolf Steiner lecture editions (.docx, EPUB) from rsarchive.org and a local catalog"
+readme = "rsarchive/README.md"
+requires-python = ">=3.12"
+# The core (fetch, parse, docx/EPUB building, the catalog) is stdlib apart from the HTML
+# parser. Everything else is imported only by the command that needs it: see the extras.
+dependencies = ["beautifulsoup4>=4.12"]
+
+[project.optional-dependencies]
+pdf = ["pypdf>=4.0"]                                 # contents-pages, docx --toc-pages
+tafel = ["Pillow>=10.0", "reportlab>=4.0"]           # tafel-pdf
+ocr = ["pytesseract>=0.3.10", "deep-translator>=1.11"]  # tafel-pdf --ocr / --translate
+llm = ["anthropic>=0.40"]                            # catalog tagging proposals
+schema = ["jsonschema>=4.0"]                         # lectures.json validation
+legacy = ["requests>=2.31", "tqdm>=4.66"]            # get-lecture-images.py at the repo root
+edition = [                                          # the local per-book edition scripts
+    "lxml>=5.0",
+    "python-docx>=1.1",
+    "pymupdf>=1.24",
+    "pypdf>=4.0",
+    "numpy>=1.26",
+]
+
+[project.scripts]
+rsarchive = "rsarchive.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.6", "pyright>=1.1.380"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["rsarchive"]
+
+[tool.pytest.ini_options]
+testpaths = ["rsarchive/tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [
+    "sylva-sylvarum", "temp_translations", "exports", "rsarchive_tafeln",
+    "temp_covers", "node_modules", ".private",
+    # legacy root scripts, superseded by rsarchive (to be reviewed, issue #8)
+    "generate-tafel-pdf.py", "get-lecture-images.py", "rs-md.py", "test-get-lecture-images.py",
+]
+
+[tool.ruff.lint]
+# Real defects only (pyflakes, syntax errors). Style rules can come later, one at a time.
+select = ["F", "E9"]
+
+[tool.pyright]
+include = ["rsarchive"]
+exclude = ["rsarchive/tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"

@@ -9,7 +9,6 @@ volumes printed in a deliberately NON-chronological order (1917, 1917, 1912, 191
 """
 from __future__ import annotations
 
-import sqlite3
 import unittest
 
 from rsarchive import compilation, cycles, epub, models

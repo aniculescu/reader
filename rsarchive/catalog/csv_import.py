@@ -45,7 +45,7 @@ import csv
 import os
 import re
 import sqlite3
-from typing import List, Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple
 
 from rsarchive import fetch, ldates
 from rsarchive.models import Lecture

@@ -631,7 +631,6 @@ class TestCycleSubtitles(unittest.TestCase):
     def test_attach_positions_marks_a_lone_single_translation(self):
         from rsarchive import fetch
 
-        base = "https://rsarchive.org/Lectures/GA211/"
         extras = [fetch.IndexEntry(ga="211", url="s1", date_iso="1922-04-02",
                                    book_title="Single Translation", book_url="")]
         lectures = [models.Lecture(ga="211", url="s1", date_iso="1922-04-02")]

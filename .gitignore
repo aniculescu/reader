@@ -41,3 +41,6 @@ sylva-sylvarum/
 /lectures.json
 /temp_covers/
 templates/epub/style.css
+
+# uv project environment
+.venv/

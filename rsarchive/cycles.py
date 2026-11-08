@@ -36,7 +36,7 @@ from __future__ import annotations
 import re
 import sqlite3
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 from urllib.parse import urljoin
 
 # A real single-lecture href: 8-digit date, optional edition letter, 2-digit index.
