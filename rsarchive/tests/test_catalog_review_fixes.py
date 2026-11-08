@@ -189,6 +189,32 @@ class TestDumpKeepsFtsRowids(unittest.TestCase):
             "SELECT rowid FROM lectures_fts WHERE lectures_fts MATCH 'charlie'")])
         c2.execute("INSERT INTO lectures_fts(lectures_fts, rank) VALUES('integrity-check', 1)")
 
+    def test_a_python_312_style_dump_loads_on_any_python(self):
+        """3.12's iterdump writes the FTS table as a raw sqlite_master row; such a dump
+        must still load, and must not leave a raw row in a newly written dump."""
+        conn = make_db()
+        add_volume(conn, "1")
+        conn.execute("INSERT INTO lectures (id, ga, url, title_en) VALUES (3, '1', 'u', 'delta')")
+        conn.commit()
+        if not db._has_fts(conn):
+            self.skipTest("SQLite build without FTS5")
+        text = db.dump_sql(conn)
+        self.assertNotIn("writable_schema", text)
+        import re
+        create = re.search(r"CREATE VIRTUAL TABLE[^;]*;", text).group(0)   # may span lines
+        raw = ("PRAGMA writable_schema=ON;\nINSERT INTO sqlite_master(type,name,tbl_name,"
+               "rootpage,sql)VALUES('table','lectures_fts','lectures_fts',0,'%s');"
+               % create[:-1].replace("'", "''"))
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, True)
+        path = os.path.join(tmp, "dump.sql")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(text.replace(create, raw).replace("COMMIT;", "PRAGMA writable_schema=OFF;\nCOMMIT;"))
+        c2 = db.connect(":memory:")
+        db.load_dump(c2, path)
+        self.assertEqual([3], [r[0] for r in c2.execute(
+            "SELECT rowid FROM lectures_fts WHERE lectures_fts MATCH 'delta'")])
+
 
 class TestV3DataFixesForRefs(unittest.TestCase):
     def test_unresolved_rule_refs_proposed_and_explicit_continuations(self):

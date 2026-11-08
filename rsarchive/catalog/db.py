@@ -68,6 +68,21 @@ _FTS_SHADOW_RE = re.compile(
 # has a gap. Those rows are dropped too; the dump ends with an FTS 'rebuild' instead.
 _FTS_ROWS_RE = re.compile(r"^\s*INSERT\s+INTO\s+['\"]?lectures_fts['\"]?\s+VALUES", re.I)
 _FTS_REBUILD_SQL = "INSERT INTO lectures_fts(lectures_fts) VALUES('rebuild');"
+# Python 3.12's ``iterdump`` writes a virtual table as a raw ``sqlite_master`` row under
+# ``PRAGMA writable_schema=ON``. The table is then not live in the loading session, so
+# the trailing rebuild fails ("no such table: lectures_fts"). Written back as the plain
+# ``CREATE VIRTUAL TABLE`` statement, the same dump loads on every Python.
+_RAW_VTABLE_RE = re.compile(
+    r"^INSERT INTO sqlite_master\(type,name,tbl_name,rootpage,sql\)\s*VALUES"
+    r"\('table','[^']*','[^']*',0,'(CREATE VIRTUAL TABLE (?:[^']|'')*)'\);$",
+    re.I | re.M)
+_WRITABLE_SCHEMA_RE = re.compile(r"^PRAGMA writable_schema=(?:ON|OFF);\n?", re.I | re.M)
+
+
+def _portable_dump(sql: str) -> str:
+    """``sql`` with Python 3.12's raw virtual-table rows turned back into statements."""
+    sql = _WRITABLE_SCHEMA_RE.sub("", sql)
+    return _RAW_VTABLE_RE.sub(lambda m: m.group(1).replace("''", "'") + ";", sql)
 
 
 # ----------------------------------------------------------------------- connection
@@ -451,7 +466,7 @@ def dump_sql(conn: sqlite3.Connection, *, with_content: bool = False) -> str:
              if not _FTS_SHADOW_RE.match(s) and not _FTS_ROWS_RE.match(s)]
     if _has_fts(conn):
         stmts.append(_FTS_REBUILD_SQL)
-    return "PRAGMA foreign_keys=OFF;\n" + "\n".join(stmts) + "\n"
+    return _portable_dump("PRAGMA foreign_keys=OFF;\n" + "\n".join(stmts) + "\n")
 
 
 def _has_lectures(conn: sqlite3.Connection) -> bool:
@@ -483,7 +498,7 @@ def load_dump(conn: sqlite3.Connection, path: str) -> None:
     is rebuilt from ``lectures`` at the end, so a dump written before :func:`dump_sql`
     stopped emitting the (rowid-less) FTS rows still restores a correct index.
     """
-    sql = Path(path).read_text(encoding="utf-8")
+    sql = _portable_dump(Path(path).read_text(encoding="utf-8"))
     # The dump disables FK enforcement (child rows may precede their parent table);
     # ensure it is off even for a dump that lacks the pragma, then restore afterwards.
     conn.commit()
@@ -493,6 +508,10 @@ def load_dump(conn: sqlite3.Connection, path: str) -> None:
         if _has_fts(conn):
             conn.execute(_FTS_REBUILD_SQL)
     except sqlite3.OperationalError:
+        # The dump runs inside its own BEGIN…COMMIT, so a failure leaves that
+        # transaction open: undo the partial load before retrying without FTS, or the
+        # retry trips over tables the first attempt already created.
+        conn.rollback()
         conn.executescript(_strip_fts(sql))
     conn.commit()
     conn.execute("PRAGMA foreign_keys = ON")
