@@ -241,6 +241,80 @@ class TestFooterSidebarCutoff(ParseTestBase):
         self.assertNotIn("Calendar of the Soul", text)
 
 
+class TestArticleContainer(ParseTestBase):
+    """Inside div.contentBegins the page is the lecture's own content (GA 90a).
+
+    The chrome heuristics — drop paragraphs under 40 characters, drop lines matching the
+    boilerplate pattern — dropped real text there, and tables, legends and section labels
+    were never read. Above the container the old filtering still applies.
+    """
+
+    LONG = "A genuine body paragraph that comfortably exceeds the forty character mark."
+    fixtures = {
+        "article": (
+            "<html><body>"
+            "<p>Donate books.</p>"                                  # chrome above: dropped
+            '<div class="contentBegins"><h3>10. Description of the Rounds</h3>'
+            '<p><span class="paragraphMarker">[ 1 ] </span>%s</p>'
+            '<p><span class="paragraphMarker">[ 2 ] </span>Here is how it works:</p>'
+            "<p>[Gap in the transcript]</p>"
+            '<p><span class="paragraphMarker">[ 3 ] </span>A cycle completed is '
+            "denoted by © in these notes, a symbol of the speaker.</p>"
+            "<blockquote><p>1. The first subrace, the Indian subrace.</p>\n"
+            "2. The peoples who were inspired by the Rupa Plane.</p>\n</blockquote>"
+            "<figure><img src=\"/x/images/90-08.webp\" alt=\"Diagram 1\">"
+            "<figcaption>The Lemurian human<br>The Atlantean human</figcaption></figure>"
+            "<h4>From the Q&amp;A section</h4>"
+            "<table><thead><tr><th>Adi-Buddha</th><th>Adi-Atma</th></tr></thead>"
+            "<tbody><tr><td>Rupa Plane<br>Measure</td><td>Love</td></tr></tbody></table>"
+            "</div>"
+            '<div class="leftNavigation"><h4>Week 32</h4><p>Sidebar.</p></div>'
+            "</body></html>" % LONG
+        ),
+    }
+
+    def blocks(self):
+        blocks, _fn = self.extract("article")
+        return blocks
+
+    def texts(self):
+        return [para_text(b) for b in self.blocks() if b.type == BLOCK_PARAGRAPH]
+
+    def test_short_paragraphs_inside_are_kept(self):
+        self.assertIn("[ 2 ] Here is how it works:", self.texts())
+        self.assertIn("[Gap in the transcript]", self.texts())
+
+    def test_a_copyright_sign_in_the_text_is_not_boilerplate(self):
+        self.assertTrue(any(t.startswith("[ 3 ] A cycle completed") for t in self.texts()))
+
+    def test_a_paragraph_that_lost_its_opening_tag_is_restored(self):
+        self.assertIn("2. The peoples who were inspired by the Rupa Plane.", self.texts())
+
+    def test_legend_lines_and_labels_are_italic_paragraphs(self):
+        labels = [para_text(b) for b in self.blocks()
+                  if b.type == BLOCK_PARAGRAPH and b.runs[0].kind == RUN_ITALIC]
+        self.assertEqual(labels, ["The Lemurian human", "The Atlantean human",
+                                  "From the Q&A section"])
+
+    def test_a_table_becomes_a_table_block(self):
+        tables = [b for b in self.blocks() if b.type == "table"]
+        self.assertEqual(len(tables), 1)
+        self.assertTrue(tables[0].has_header)
+        self.assertEqual(tables[0].rows, [["Adi-Buddha", "Adi-Atma"],
+                                          ["Rupa Plane / Measure", "Love"]])
+
+    def test_order_follows_the_page(self):
+        kinds = [b.type if b.type != BLOCK_PARAGRAPH else para_text(b)[:6]
+                 for b in self.blocks()]
+        self.assertEqual(kinds[-5:], ["image", "The Le", "The At", "From t", "table"])
+
+    def test_chrome_outside_the_container_is_still_dropped(self):
+        text = all_text(self.blocks())
+        self.assertNotIn("Donate books", text)
+        self.assertNotIn("Week 32", text)
+        self.assertNotIn("Sidebar.", text)
+
+
 # ---------------------------------------------------------------- one footnote
 
 class TestFootnoteExtraction(ParseTestBase):

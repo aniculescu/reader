@@ -12,7 +12,8 @@ cases are not lost:
   * ``~/.claude/scripts/add_lecture.py`` — ``italic_runs`` / ``tokenize_runs`` /
     ``extract_content`` / ``is_german`` / the footer-sidebar cutoff / the boilerplate
     filter / the verse rules (multi-line blockquote => centered italic verse,
-    single-line blockquote => ordinary body paragraph, <40-char paragraphs dropped).
+    single-line blockquote => ordinary body paragraph, <40-char paragraphs dropped —
+    the last two only where no ``div.contentBegins`` bounds the article).
   * the old TypeScript scraper's ``lecture.ts`` — the clean ``div.English`` selector idea: when
     the page exposes ``div.English`` / ``div.German`` blocks, use them as a STRUCTURAL
     language boundary (body = between the English open and the German start) and skip the
@@ -114,6 +115,32 @@ _ENGLISH_OPEN = re.compile(
 _GERMAN_OPEN = re.compile(
     r"""<div\b[^>]*\bclass\s*=\s*["'][^"']*\bGerman\b[^"']*["'][^>]*>""", re.I
 )
+
+# The site's article container. Everything from its opening to the trailing chrome
+# (FOOTER_PATTERNS) is the lecture page's own content, so when it is present it bounds
+# the body structurally and the chrome heuristics (the 40-character rule, BOILER) are
+# not needed — inside it they only ever dropped lecture text: a numbered "[ 16 ] Here is
+# how the process works:", "[Gap in the transcript]", a paragraph using "©" as a symbol.
+_CONTENT_OPEN = re.compile(
+    r"""<div\b[^>]*\bclass\s*=\s*["'][^"']*\bcontentBegins\b[^"']*["'][^>]*>""", re.I
+)
+
+# Text left after a closing </p> with no opening tag of its own (GA 90a, 11 Nov 1904:
+# "<p>1. …</p>\n2. …</p>"). It is a paragraph whose <p> was lost; restore the tag so
+# the paragraph walk sees it. The text must run to a </p> without crossing a block tag.
+_ORPHAN_P = re.compile(
+    r"(</p>\s*)(?=[^\s<](?:(?!<p\b|</?(?:div|blockquote|table|tr|td|th|li|ul|ol|h\d)\b).)*?</p>)",
+    re.I | re.S,
+)
+
+# Article content that is not a <p>, kept when the body is bounded by _CONTENT_OPEN:
+# section labels (<h4> "From the Q&A section", "Afterword"), diagram legends
+# (<figcaption>) and tables.
+_LABEL_RE = re.compile(r"<(h4|h5|h6|figcaption)\b[^>]*>(.*?)</\1>", re.I | re.S)
+_TABLE_RE = re.compile(r"<table\b.*?</table>", re.I | re.S)
+_ROW_RE = re.compile(r"<tr\b[^>]*>(.*?)</tr>", re.I | re.S)
+_CELL_RE = re.compile(r"<(t[hd])\b[^>]*>(.*?)</\1>", re.I | re.S)
+_BR_RE = re.compile(r"<br\s*/?>", re.I)
 
 # Inline illustrations. Match any <img> (png/jpg/webp, any path — not just {ga}-NN.webp)
 # and skip site chrome (logos, sidebar, social, Media thumbnails, COTS, etc.).
@@ -220,6 +247,24 @@ def tokenize_runs(fragment: str, fn_alloc: Callable[[List[Run]], int]) -> List[R
 _GERMAN_DENSITY = 0.08
 
 
+def _plain(fragment: str) -> str:
+    """Visible text of an HTML fragment: tags dropped, entities decoded, spaces collapsed."""
+    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", fragment))).strip()
+
+
+def _table_block(table_html: str) -> Optional[Block]:
+    """A ``<table>`` as a BLOCK_TABLE; a cell's ``<br>`` lines are joined with " / "."""
+    rows, header = [], False
+    for i, row in enumerate(_ROW_RE.findall(table_html)):
+        cells = _CELL_RE.findall(row)
+        if i == 0:
+            header = any(tag.lower() == "th" for tag, _ in cells)
+        rows.append([" / ".join(t for t in (_plain(l) for l in _BR_RE.split(c)) if t)
+                     for _tag, c in cells])
+    rows = [r for r in rows if any(r)]
+    return Block.table(rows, has_header=header) if rows else None
+
+
 def _is_german(frag: str) -> bool:
     """True when a paragraph looks like German ORIGINAL text, not English quoting German.
 
@@ -256,6 +301,13 @@ def _extract_paragraphs(page: str, fn_alloc: Callable[[List[Run]], int]) -> List
     german = _GERMAN_OPEN.search(page)
     bilingual = bool(english or german)
     top = english.end() if english else 0  # skip nav/chrome before the English column
+    # From the article container on (see _CONTENT_OPEN) the page is its own content and
+    # needs no chrome filter. The body still starts at ``top``: lines above the container,
+    # such as a "Translated by …" credit, are kept or filtered exactly as before.
+    content = _CONTENT_OPEN.search(page)
+    structural_from = content.end() if content else len(page) + 1
+
+    tables = [(m.start(), m.end()) for m in _TABLE_RE.finditer(page)]
 
     # Trailing chrome (side-nav / sidebar / footer) is the lower bound of the body; when a
     # German original follows the English, its opener is the tighter (earlier) bound.
@@ -310,12 +362,16 @@ def _extract_paragraphs(page: str, fn_alloc: Callable[[List[Run]], int]) -> List
                 break
             if m.start() < top:  # nav/chrome paragraph before the English column
                 continue
+            inside = m.start() >= structural_from   # within the article container
+            if inside and any(a <= m.start() < b for a, b in tables):
+                continue  # a table's own paragraphs arrive with its BLOCK_TABLE
             frag = m.group(1)
             plain = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", frag))).strip()
             low = plain.lower()
-            if (
-                not plain
-                or low.startswith("a project of")
+            if not plain:
+                continue
+            if not inside and (
+                low.startswith("a project of")
                 or "steiner online library" in low
                 or BOILER.search(plain)
             ):
@@ -333,7 +389,7 @@ def _extract_paragraphs(page: str, fn_alloc: Callable[[List[Run]], int]) -> List
                     is_verse = True
 
             if not is_verse:  # single-line blockquote or ordinary paragraph => body text
-                if len(plain) < 40:
+                if len(plain) < 40 and not inside:
                     continue
                 runs = tokenize_runs(frag, fn_alloc)
                 if runs:
@@ -361,6 +417,21 @@ def _extract_paragraphs(page: str, fn_alloc: Callable[[List[Run]], int]) -> List
         kind = IMAGE_TAFEL if re.search(r"-T\d+\.", src, re.I) else IMAGE_SKETCH
         items.append((im.start(), Block.image(src, am.group(1) if am else "", kind)))
 
+    # Section labels, diagram legends and tables of the article itself. Only read inside
+    # the article container, where nothing else (sidebar headings) can reach.
+    lo = max(top, structural_from)
+    for m in _LABEL_RE.finditer(page):
+        if lo <= m.start() < body_limit:
+            for line in _BR_RE.split(m.group(2)):   # a legend: one paragraph per line
+                text = _plain(line)
+                if text:
+                    items.append((m.start(), Block.paragraph([Run.italic(text)])))
+    for a, b in tables:
+        if lo <= a < body_limit:
+            block = _table_block(page[a:b])
+            if block:
+                items.append((a, block))
+
     items.sort(key=lambda t: t[0])
     return [b for _pos, b in items]
 
@@ -370,14 +441,17 @@ def extract_body(page_html: str) -> Tuple[List[Block], List[Footnote]]:
 
     Use the ``div.English`` / ``div.German`` structure as the language boundary when
     present; otherwise take the first English block above the German original (stopword
-    heuristic). Apply the footer/sidebar cutoff and the boilerplate filter, drop
-    paragraphs shorter than 40 characters, treat a multi-line ``<blockquote>`` as a verse
+    heuristic). Apply the footer/sidebar cutoff; where no ``div.contentBegins`` bounds
+    the article, also apply the boilerplate filter and drop paragraphs shorter than 40
+    characters (inside it, keep ``<h4>`` labels, ``<figcaption>`` legends and tables
+    too). Restore ``<p>`` openers the source lost, treat a multi-line ``<blockquote>`` as a verse
     block (and a single-line one as ordinary body), and allocate LOCAL footnote ids in
     body order. Returns ``(blocks, footnotes)``.
 
     Raises ``ValueError`` if nothing could be extracted.
     """
     page = re.sub(r"<!--.*?-->", "", page_html, flags=re.S)  # drop commented-out German
+    page = _ORPHAN_P.sub(r"\1<p>", page)                     # restore lost <p> openers
 
     footnotes: List[Footnote] = []
 
