@@ -22,6 +22,9 @@ __pycache__/
 catalog.db
 *.db.bak-*
 
+# Private overlay (its own private repo; see the private README): Claude memory, dictionary
+.private/
+
 # Kept local: per-book edition work (it embeds published translations) and personal data
 scripts/*ga170*
 scripts/*ga115*
