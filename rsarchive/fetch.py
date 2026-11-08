@@ -188,7 +188,9 @@ def format_book_title(raw_title: str, ga: str) -> str:
     Strip any embedded ``GA-NNN`` token and surrounding punctuation, then append a
     canonical ``(GA-{ga})`` suffix. An empty result collapses to just ``(GA-{ga})``.
     """
-    cleaned = re.sub(r"\bGA[-\s]?\d{1,3}\b", "", raw_title, flags=re.IGNORECASE)
+    # The optional letter keeps lettered volumes ("GA 90a", "GA 89a") from leaving
+    # their number in the title.
+    cleaned = re.sub(r"\bGA[-\s]?\d{1,3}[a-z]?\b", "", raw_title, flags=re.IGNORECASE)
     cleaned = re.sub(r"^[\s:,\-–—]+|[\s:,\-–—]+$", "", cleaned)
     if not cleaned:
         return f"(GA-{ga})"

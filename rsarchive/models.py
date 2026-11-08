@@ -31,7 +31,7 @@ Footnote model note:
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 
@@ -312,10 +312,11 @@ class Image:
     local_path: str = ""        # filled by images.download_images when downloaded
     width_emu: int = 0          # sketches only; 0 => docxbuild default sizing
     before_prefix: str = ""     # sketches only; anchor paragraph prefix
+    after_prefix: str = ""      # sketches closing a lecture: the paragraph they follow
 
     def to_json(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {"kind": self.kind, "num": self.num}
-        for k in ("url", "filename", "local_path", "before_prefix"):
+        for k in ("url", "filename", "local_path", "before_prefix", "after_prefix"):
             v = getattr(self, k)
             if v:
                 d[k] = v
@@ -328,7 +329,8 @@ class Image:
         return cls(kind=d["kind"], num=d["num"], url=d.get("url", ""),
                    filename=d.get("filename", ""), local_path=d.get("local_path", ""),
                    width_emu=d.get("width_emu", 0),
-                   before_prefix=d.get("before_prefix", ""))
+                   before_prefix=d.get("before_prefix", ""),
+                   after_prefix=d.get("after_prefix", ""))
 
 
 @dataclass
@@ -539,6 +541,7 @@ def lecture_json_schema() -> Dict[str, Any]:
             "local_path": {"type": "string"},
             "width_emu": {"type": "integer", "minimum": 0},
             "before_prefix": {"type": "string"},
+            "after_prefix": {"type": "string"},
         },
         "additionalProperties": False,
     }

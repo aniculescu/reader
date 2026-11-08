@@ -200,26 +200,31 @@ def convert_sketches_png(images: Images) -> Images:
 def body_sketches(lecture):
     """Build the sketch list to embed straight from the body ``BLOCK_IMAGE`` (sketch)
     blocks — the in-text illustrations of the SAME edition as the parsed body, at their
-    real positions (``before_prefix`` = text of the next paragraph). This avoids the
-    edition mismatch between ``discover_images`` (German webp) and the parsed English
+    real positions (``before_prefix`` = text of the next paragraph; for a sketch that
+    closes the lecture, ``after_prefix`` = text of the paragraph before it). This avoids
+    the edition mismatch between ``discover_images`` (German webp) and the parsed English
     body (edition .gif/.png at correct positions). Returns a list of :class:`Image`."""
     from urllib.parse import urljoin, urlparse
     from rsarchive.models import (BLOCK_IMAGE, BLOCK_PARAGRAPH, IMAGE_SKETCH, Image)
     body = lecture.body
+
+    def text(block) -> str:
+        return "".join(r.text for r in block.runs).strip()[:40]
+
     out, num = [], 0
     for i, b in enumerate(body):
         if b.type != BLOCK_IMAGE or b.img_kind != IMAGE_SKETCH:
             continue
         num += 1
-        prefix = ""
-        for j in range(i + 1, len(body)):
-            if body[j].type == BLOCK_PARAGRAPH and body[j].runs:
-                prefix = "".join(r.text for r in body[j].runs).strip()[:40]
-                break
+        before = next((text(body[j]) for j in range(i + 1, len(body))
+                       if body[j].type == BLOCK_PARAGRAPH and body[j].runs), "")
+        after = "" if before else next(
+            (text(body[j]) for j in range(i - 1, -1, -1)
+             if body[j].type == BLOCK_PARAGRAPH and body[j].runs), "")
         out.append(Image(kind=IMAGE_SKETCH, num=num,
                          url=urljoin("https://rsarchive.org", b.src),
                          filename=os.path.basename(urlparse(b.src).path),
-                         before_prefix=prefix))
+                         before_prefix=before, after_prefix=after))
     return out
 
 

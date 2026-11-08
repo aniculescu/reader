@@ -44,7 +44,8 @@ def subcommands():
 class ParserTest(unittest.TestCase):
     def test_every_subcommand_is_registered(self):
         self.assertEqual(subcommands(), ["docx", "json", "images", "illustrate", "tafel-notes",
-                                         "ornament", "remove", "docx-check", "catalog"])
+                                         "ornament", "remove", "docx-check", "word-pdf",
+                                         "contents-pages", "catalog"])
 
     def test_docstring_lists_the_registered_subcommands(self):
         section = cli.__doc__.split("Subcommands\n-----------\n", 1)[1].split("\n\n", 1)[0]
@@ -57,6 +58,58 @@ class ParserTest(unittest.TestCase):
         self.assertEqual(stop.exception.code, 0)
         for name in subcommands():
             self.assertIn(name, out.getvalue())
+
+
+class EditionTest(unittest.TestCase):
+    """--edition keeps one translation of a GA whose index lists several (GA 90a)."""
+
+    def resolve(self, specs):
+        from unittest import mock
+
+        from rsarchive.fetch import IndexEntry
+
+        base = "https://rsarchive.org/Lectures/GA090a/English/"
+        rows = [IndexEntry(ga="090a", url=base + "%s/%s.html" % (ed, title), title=title,
+                           book_url=base + ed + "/", date_iso=date, city=city)
+                for title, ed, date, city in specs]
+        for i, row in enumerate(rows, 1):
+            row.position, row.count = i, len(rows)
+        args = cli.build_parser().parse_args(
+            ["docx", "--template", "t.docx", "--out", "o.docx", "--ga", "090a",
+             "--edition", "SOL2024"])
+        with mock.patch("rsarchive.fetch.resolve_ga", return_value=rows):
+            return cli._resolve_entries(args)
+
+    def test_positions_count_within_the_edition(self):
+        entries = self.resolve([("a", "SOL2024", "1904-10-03", "Berlin"),
+                                ("b", "UNK1969", "1904-10-10", "Berlin"),
+                                ("c", "SOL2024", "1904-10-10", "Berlin")])
+        self.assertEqual([(e.title, e.position, e.count) for e in entries],
+                         [("a", 1, 2), ("c", 2, 2)])
+
+    def test_a_missing_city_comes_from_the_same_lecture_in_another_edition(self):
+        entries = self.resolve([("a", "UNK1969", "1904-10-10", "Berlin"),
+                                ("b", "SOL2024", "1904-10-10", ""),
+                                ("c", "SOL2024", "1904-10-12", "")])
+        self.assertEqual([e.city for e in entries], ["Berlin", ""])
+
+    def test_editions_that_disagree_leave_the_city_blank(self):
+        entries = self.resolve([("a", "UNK1969", "1904-10-10", "Berlin"),
+                                ("b", "APC1948", "1904-10-10", "Hamburg"),
+                                ("c", "SOL2024", "1904-10-10", "")])
+        self.assertEqual([e.city for e in entries], [""])
+
+
+class BookTitleTest(unittest.TestCase):
+    def test_a_lettered_volume_number_is_stripped(self):
+        from rsarchive import fetch
+
+        self.assertEqual(fetch.format_book_title(
+            "Self-Knowledge and God-Knowledge I Theosophy, Christology and Mythology GA 90a",
+            "090a"),
+            "Self-Knowledge and God-Knowledge I Theosophy, Christology and Mythology (GA-090a)")
+        self.assertEqual(fetch.format_book_title("Spiritual Hierarchies GA 110", "110"),
+                         "Spiritual Hierarchies (GA-110)")
 
 
 class DocxCheckTest(unittest.TestCase):

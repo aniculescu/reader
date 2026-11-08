@@ -143,6 +143,13 @@ python -m rsarchive.cli remove --docx D.docx --title "Exact Heading1 Title" [--o
 # List the defects Word would reject in .docx packages:
 python -m rsarchive.cli docx-check D.docx [E.docx ...]
 
+# Render with Microsoft Word (a uniquely named copy; your open documents are untouched):
+python -m rsarchive.cli word-pdf D.docx [--out D.pdf]
+
+# Fill a contents page's page numbers from Word's render (re-renders until stable):
+uv run --with pypdf python -m rsarchive.cli contents-pages D.docx [--pdf D.pdf]
+# …or at build time: docx … --toc --toc-pages
+
 # The SQLite catalog (init / import / subjects / refs / tags / ingest / export / dump ...):
 python -m rsarchive.cli catalog --help
 ```
@@ -166,7 +173,9 @@ All modules live in `rsarchive/`; import siblings as `from rsarchive.X import ..
 | `compilation.py` | stdlib | Build a book from a published compilation index. |
 | `docxpackage.py` | stdlib | Building packages Word accepts. `add`/`put` insert WordprocessingML children at their `wml.xsd` position (use them instead of `SubElement`/`append`); `adopt` brings a part from another package with its relationships, reached parts and content types (never merge packages wholesale); `write`/`repackage`/`verify` refuse output with defects the write introduced. |
 | `docxbuild.py` | stdlib | `Lecture` + template `.docx` → output `.docx`. XML fragment builders (schema-ordered), byte-for-byte repackage, drawing/footnote-id continuation, idempotent skip, placement. |
-| `illustrations.py` | stdlib | Into an existing `.docx`: embed inline sketches, insert ⟦TEMP-TAFEL⟧ notes and chapter ornaments. |
+| `illustrations.py` | stdlib | Into an existing `.docx`: embed inline sketches, insert ⟦TEMP-TAFEL⟧ notes and chapter ornaments, a cover, and a contents page whose entries link to bookmarked headings. |
+| `contents.py` | pypdf (lazy) | Contents page numbers from Word's own render: finds each chapter's first page, fills the entries, re-renders until stable. |
+| `wordpdf.py` | stdlib + macOS Word | Render a `.docx` to PDF with Microsoft Word, on a uniquely named copy found by index and folder, never `active document`. |
 | `edit.py` | stdlib | Remove a lecture block by exact Heading1 title (edition swaps). |
 | `templatesummary.py` | stdlib | Readable, diffable summary of a `.docx` template (page setup, styles in points and cm, footers, fonts, settings, media), committed as `templates/print-template.styles.md` next to the template. See `templates/README.md`. |
 | `epub.py` | stdlib | Kindle-friendly EPUB 3 from `Lecture`s, styled by `templates/epub/style/`. `scripts/docx_epub.py` builds one from a finished edition `.docx`. |

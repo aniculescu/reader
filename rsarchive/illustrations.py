@@ -175,10 +175,13 @@ def embed_illustration(
     before_prefix: str,
     width_emu: int = DEFAULT_WIDTH_EMU,
     out: Optional[str] = None,
+    after_prefix: str = "",
 ) -> None:
     """Embed ``image`` (a PNG sketch) as a centered inline drawing inserted BEFORE the
     paragraph — scoped to the lecture whose Heading1 == ``lecture_title`` — whose text
-    starts with ``before_prefix``.
+    starts with ``before_prefix``. A sketch that closes its lecture has no paragraph
+    after it; pass ``before_prefix=""`` and ``after_prefix`` (the text of the paragraph
+    it follows) to insert it AFTER that paragraph instead.
 
     Adds a new ``word/media`` part + a document relationship, and inserts the drawing
     paragraph; every other zip entry is preserved byte-for-byte. Idempotent: if a
@@ -219,19 +222,26 @@ def embed_illustration(
     if lec_start is None:
         raise LookupError(f"Lecture title not found: {lecture_title}")
     lec_end = next((i for i, t in heads if i > lec_start), len(paras))
+    anchor = before_prefix or after_prefix
+    if not anchor:
+        raise ValueError("Give before_prefix, or after_prefix for a closing sketch.")
     target = None
     for i in range(lec_start, lec_end):
-        if para_text(paras[i].group(0)).startswith(before_prefix):
+        if para_text(paras[i].group(0)).startswith(anchor):
             target = i
             break
     if target is None:
         raise LookupError(
-            f"Paragraph starting with {before_prefix!r} not found in that lecture."
+            f"Paragraph starting with {anchor!r} not found in that lecture."
         )
 
-    # idempotency: drawing already right before target?
-    if target > 0 and "<w:drawing" in paras[target - 1].group(0):
-        print("A drawing already precedes the target paragraph — skipping.")
+    # idempotency: drawing already right before (or, for a closing sketch, after) target?
+    if before_prefix:
+        if target > 0 and "<w:drawing" in paras[target - 1].group(0):
+            print("A drawing already precedes the target paragraph — skipping.")
+            return
+    elif target + 1 < len(paras) and "<w:drawing" in paras[target + 1].group(0):
+        print("A drawing already follows the target paragraph — skipping.")
         return
 
     # add media + relationship
@@ -247,7 +257,7 @@ def embed_illustration(
 
     did = max_draw_id(doc) + 1
     para_xml = drawing_paragraph(rid, cx, cy, did, did + 1, os.path.basename(image))
-    insert_at = paras[target].start()
+    insert_at = paras[target].start() if before_prefix else paras[target].end()
     new_doc = doc[:insert_at] + para_xml + doc[insert_at:]
 
     ET.fromstring(new_doc)  # well-formedness
@@ -263,8 +273,9 @@ def embed_illustration(
         new_entries={media_name: img_bytes},
     )
     print(
-        f"Embedded {media_name} as {rid} ({w}x{h}px -> {cx}x{cy} EMU) before "
-        f"{before_prefix!r} in {lecture_title!r}. Wrote {out_path}."
+        f"Embedded {media_name} as {rid} ({w}x{h}px -> {cx}x{cy} EMU) "
+        f"{'before' if before_prefix else 'after'} {anchor!r} in {lecture_title!r}. "
+        f"Wrote {out_path}."
     )
 
 
@@ -346,14 +357,22 @@ def add_cover(docx: str, image: str, out: Optional[str] = None,
     return True
 
 
+CONTENTS_BOOKMARK = "_contents_%03d"     # hidden (leading "_") in Word's bookmark list
+
+
 def add_contents(docx: str, out: Optional[str] = None, heading: str = "Contents",
                  skip_titles: Sequence[str] = ()) -> int:
     """Insert a contents page listing every ``Heading1`` of ``docx``.
 
-    Each line is the chapter title plus the date from the ``Subtitle`` line beneath it,
-    when there is one. The section goes after a cover page, if present, and before the
-    first chapter. Idempotent: a document that already has a ``heading`` section is left
-    alone. Returns the number of entries listed.
+    Each entry is the chapter title plus the date from the ``Subtitle`` line beneath it,
+    when there is one, set bold, linked to a bookmark placed on the chapter's heading, and
+    followed by a dot leader to a page number at the right margin. The page numbers are
+    left empty here: only Word's pagination knows them, and
+    :func:`rsarchive.contents.fill_pages` writes them in from a Word render.
+
+    The section goes after a cover page, if present, and before the first chapter.
+    Idempotent: a document that already has a ``heading`` section is left alone. Returns
+    the number of entries listed.
     """
     with zipfile.ZipFile(docx) as z:
         doc = z.read("word/document.xml").decode("utf-8")
@@ -365,7 +384,7 @@ def add_contents(docx: str, out: Optional[str] = None, heading: str = "Contents"
         return m.group(1) if m else ""
 
     skip = {t.strip().lower() for t in skip_titles} | {heading.strip().lower()}
-    entries: List[Tuple[str, str]] = []
+    entries: List[Tuple[str, str, int]] = []           # (title, date, paragraph index)
     insert_before: Optional[int] = None
     leading_gap = False
     for i, p in enumerate(paras):
@@ -384,7 +403,7 @@ def add_contents(docx: str, out: Optional[str] = None, heading: str = "Contents"
             if _DATE_SUBTITLE.match(t):
                 date = t.split(" in ")[0].strip()
                 break
-        entries.append((title, date))
+        entries.append((title, date, i))
         if insert_before is None:
             # Place the section ahead of the blank/page-break paragraphs that precede
             # chapter one — the template's trailing empty paragraph and the lecture
@@ -397,17 +416,39 @@ def add_contents(docx: str, out: Optional[str] = None, heading: str = "Contents"
     if not entries or insert_before is None:
         return 0
 
+    # The page number sits on a right tab at the margin, after a dot leader.
+    tab = text_area_emu(doc)[0] // 635
     lines = ['<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space='
              '"preserve">%s</w:t></w:r></w:p>' % _xml_text_escape(heading)]
-    for title, date in entries:
+    edits: List[Tuple[int, str]] = []                  # (offset, xml) into the old doc
+    next_id = max([int(x) for x in re.findall(r'\bw:id="(\d+)"', doc)] or [0]) + 1
+    for n, (title, date, i) in enumerate(entries, 1):
+        name = CONTENTS_BOOKMARK % n
         text = "%s — %s" % (title, date) if date else title
-        lines.append('<w:p><w:r><w:t xml:space="preserve">%s</w:t></w:r></w:p>'
-                     % _xml_text_escape(text))
+        lines.append(
+            '<w:p><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="%d"/></w:tabs>'
+            '<w:spacing w:before="60" w:after="20"/></w:pPr>'
+            '<w:hyperlink w:anchor="%s" w:history="1"><w:r><w:rPr><w:b/>'
+            '<w:color w:val="000000"/></w:rPr><w:t xml:space="preserve">%s</w:t></w:r>'
+            '</w:hyperlink><w:r><w:tab/></w:r><w:r><w:rPr><w:b/></w:rPr>'
+            '<w:t xml:space="preserve"></w:t></w:r></w:p>'
+            % (tab, name, _xml_text_escape(text)))
+        # The bookmark spans the heading's runs: after its pPr, before its close.
+        head = paras[i]
+        ppr = re.search(r"</w:pPr>", head.group(0))
+        open_end = head.start() + (ppr.end() if ppr else head.group(0).index(">") + 1)
+        edits.append((open_end, '<w:bookmarkStart w:id="%d" w:name="%s"/>'
+                      % (next_id, name)))
+        edits.append((head.end() - len("</w:p>"), '<w:bookmarkEnd w:id="%d"/>' % next_id))
+        next_id += 1
     if not leading_gap:
         # Nothing already separates the list from chapter one.
         lines.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
+    edits.append((insert_before, "".join(lines)))
 
-    new_doc = doc[:insert_before] + "".join(lines) + doc[insert_before:]
+    new_doc = doc
+    for at, xml in sorted(edits, key=lambda e: e[0], reverse=True):
+        new_doc = new_doc[:at] + xml + new_doc[at:]
     ET.fromstring(new_doc)
     _repackage_byte_for_byte(
         docx, out or docx,
@@ -623,8 +664,8 @@ def embed_lecture_sketches(
         if not path:
             print(f"  (skipping sketch {sk.num}: no local_path)")
             continue
-        if not sk.before_prefix:
-            print(f"  (skipping sketch {sk.num}: no before_prefix anchor)")
+        if not (sk.before_prefix or sk.after_prefix):
+            print(f"  (skipping sketch {sk.num}: no anchor paragraph)")
             continue
         width = sk.width_emu or default_width_emu
         # First embed reads from the source docx and writes target_doc; subsequent
@@ -637,5 +678,6 @@ def embed_lecture_sketches(
             before_prefix=sk.before_prefix,
             width_emu=width,
             out=target_doc,
+            after_prefix=sk.after_prefix,
         )
         first = False

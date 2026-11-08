@@ -22,6 +22,8 @@ Subcommands
   ornament      insert the lemniscate separator under each chapter heading of a .docx
   remove        remove a whole lecture block (by exact Heading1 title)
   docx-check    list the defects Word rejects in .docx packages
+  word-pdf      render a .docx to PDF with Microsoft Word (on a copy)
+  contents-pages  fill a contents page's page numbers from Word's render
   catalog       the canonical SQLite catalog: init/import/subjects/refs/export/dump
 
 Subtitle framing (docx / json) mirrors add_lecture.py, with precedence
@@ -38,7 +40,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import re
 import sys
 from pathlib import Path
 from typing import List, Optional
@@ -189,6 +190,19 @@ def _resolve_entries(args) -> list:
                     "no edition %r in GA-%s; available: %s"
                     % (args.edition, ga,
                        ", ".join(sorted({epub._edition_name(e.book_url) for e in rows}))))
+            # The index numbers its rows across every edition; a lecture's standing is
+            # its rank within the chosen one ("the 60th of 81", not "the 63rd of 86").
+            # A row the index left without a city takes it from the other editions'
+            # rows of the same date, when they agree: they are the same lecture.
+            cities: dict = {}
+            for row in rows:
+                if row.city:
+                    cities.setdefault(row.date_iso, set()).add(row.city)
+            for i, row in enumerate(chosen, 1):
+                row.position, row.count = i, len(chosen)
+                known = cities.get(row.date_iso, set())
+                if not row.city and len(known) == 1:
+                    row.city = next(iter(known))
             rows = chosen
         entries.extend(rows)
     for url in args.url:
@@ -354,6 +368,10 @@ def cmd_docx(args) -> int:
         if args.cover:
             added = illustrations.add_cover(args.out, args.cover)
             print("Cover page added." if added else "Cover already present — left alone.")
+        if args.toc and args.toc_pages:
+            # Last: page numbers depend on everything above, the cover included.
+            from rsarchive import contents
+            contents.fill_pages(args.out)
 
     if args.json:
         metadata.upsert_many(args.json, lectures, include_body=not args.no_body)
@@ -485,6 +503,23 @@ def cmd_remove(args) -> int:
 
 # --------------------------------------------------------------------- docx-check cmd
 
+def cmd_word_pdf(args) -> int:
+    from rsarchive import wordpdf
+
+    pdf = wordpdf.word_pdf(args.docx, out=args.out, work_dir=args.work_dir,
+                           timeout=args.timeout)
+    print(pdf)
+    return 0
+
+
+def cmd_contents_pages(args) -> int:
+    from rsarchive import contents
+
+    pages = contents.fill_pages(args.docx, pdf=args.pdf, out=args.out, rounds=args.rounds)
+    print("Contents page numbers: %s" % ", ".join(str(p) for p in pages.values()))
+    return 0
+
+
 def cmd_docx_check(args) -> int:
     from rsarchive import docxpackage
 
@@ -530,6 +565,9 @@ def build_parser() -> argparse.ArgumentParser:
                         "(the A5 render in temp_covers/, not the Kindle JPEG)")
     d.add_argument("--toc", action="store_true",
                    help="insert a contents page listing every chapter and its date")
+    d.add_argument("--toc-pages", action="store_true",
+                   help="with --toc, fill in its page numbers from a Word render "
+                        "(needs Microsoft Word and pypdf)")
     d.add_argument("--ornaments", action="store_true",
                    help="draw the lemniscate separator under each chapter heading")
     # The apparatus course filter reuses --subcycle from the framing flags, exactly as
@@ -600,6 +638,26 @@ def build_parser() -> argparse.ArgumentParser:
                              "doubled properties, unreferenced parts, broken relationships)")
     dc.add_argument("docx", nargs="+")
     dc.set_defaults(func=cmd_docx_check)
+
+    # word-pdf
+    wp = sub.add_parser("word-pdf", help="render a .docx to PDF with Microsoft Word (a copy; "
+                                         "your open documents are never touched)")
+    wp.add_argument("docx")
+    wp.add_argument("--out", help="PDF path (default: the run's folder under "
+                                  "temp_translations/.word_pdf/)")
+    wp.add_argument("--work-dir", help="where Word's copy is made")
+    wp.add_argument("--timeout", type=int, default=600, help="seconds (default 600)")
+    wp.set_defaults(func=cmd_word_pdf)
+
+    # contents-pages
+    cp = sub.add_parser("contents-pages",
+                        help="fill a contents page's page numbers from Word's own render")
+    cp.add_argument("docx")
+    cp.add_argument("--pdf", help="read this render once instead of rendering with Word")
+    cp.add_argument("--out", help="write here instead of updating DOCX in place")
+    cp.add_argument("--rounds", type=int, default=3,
+                    help="most Word renders before giving up on stable numbers (default 3)")
+    cp.set_defaults(func=cmd_contents_pages)
 
     # catalog (DATA CORE): init | import | subjects | refs | export | dump
     cat = sub.add_parser(
